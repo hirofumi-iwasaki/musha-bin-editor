@@ -1,0 +1,42 @@
+{
+  "os": "Version 26.6.2 (Build 25G83)",
+  "dart": "3.13.3 (stable) (Tue Sep 1 01:07:17 2026 -0700) on \"macos_arm64\"",
+  "results": [
+    {
+      "sizeMiB": 1,
+      "firstViewportReadUs": 1902,
+      "wallMs": 9,
+      "rssBytes": 180781056,
+      "type": "done",
+      "bytes": 1,
+      "runs": 1,
+      "first": 524288,
+      "target": null,
+      "milliseconds": 4
+    },
+    {
+      "sizeMiB": 100,
+      "firstViewportReadUs": 388,
+      "wallMs": 273,
+      "rssBytes": 191971328,
+      "type": "done",
+      "bytes": 1,
+      "runs": 1,
+      "first": 52428800,
+      "target": null,
+      "milliseconds": 272
+    },
+    {
+      "sizeMiB": 1024,
+      "firstViewportReadUs": 389,
+      "wallMs": 2720,
+      "rssBytes": 196657152,
+      "type": "done",
+      "bytes": 1,
+      "runs": 1,
+      "first": 536870912,
+      "target": null,
+      "milliseconds": 2719
+    }
+  ]
+}
