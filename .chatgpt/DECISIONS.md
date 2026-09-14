@@ -132,3 +132,4 @@ macOS限定で開始するという最新方針を優先する。以下は過去
 - A file already open in the opposite pane is rejected to prevent conflicting writes. Opening/dropping a replacement and closing the window use Save / Discard / Cancel protection.
 - The macOS sandbox entitlement is limited to user-selected read/write files; no broad filesystem entitlement is added.
 - The packaging script re-signs the outer ad-hoc Release bundle with `Release.entitlements` so debug-only `get-task-allow` does not leak into the packaged application.
+- External-content checks compare file size and content modification time. macOS metadata/ctime changes caused by security-scoped access or cloud-file attributes do not invalidate a pane by themselves.

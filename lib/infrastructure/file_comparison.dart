@@ -21,10 +21,10 @@ class FileStamp {
     return FileStamp(stat.size, stat.modified, stat.changed);
   }
 
+  // macOS may update ctime when sandbox/security-scoped metadata or cloud-file
+  // extended attributes change. That does not mean the contents changed.
   bool matches(FileStamp other) =>
-      size == other.size &&
-      modified == other.modified &&
-      changed == other.changed;
+      size == other.size && modified == other.modified;
 }
 
 Future<Uint8List> readExactRange(

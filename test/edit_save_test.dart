@@ -81,6 +81,30 @@ void main() {
     controller.dispose();
   });
 
+  test('former source opens in the opposite pane after Save As', () async {
+    final source = File('${directory.path}/original.bin');
+    final destination = '${directory.path}/saved-as.bin';
+    await source.writeAsBytes([1, 2, 3, 4]);
+    final controller = CompareController();
+    await controller.open(source.path, true);
+    expect(
+      (await controller.save(true, destination)).outcome,
+      SaveOutcome.saved,
+    );
+
+    // Metadata changes can occur when macOS grants sandbox access or a cloud
+    // provider updates extended attributes during a Finder drop.
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await Process.run('chmod', ['400', source.path]);
+    await controller.open(source.path, false);
+
+    expect(controller.path(true)?.split('/').last, 'saved-as.bin');
+    expect(controller.path(false)?.split('/').last, 'original.bin');
+    expect(controller.invalid, isFalse);
+    expect(controller.error, isNull);
+    controller.dispose();
+  });
+
   test('save refuses an externally changed source without approval', () async {
     final source = File('${directory.path}/source.bin');
     await source.writeAsBytes([1, 2, 3]);
