@@ -1,14 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushaaeshi_binary_editor/application/compare_controller.dart';
-import 'package:mushaaeshi_binary_editor/infrastructure/safe_save.dart';
+import 'package:mushagaeshi_binary_editor/application/compare_controller.dart';
+import 'package:mushagaeshi_binary_editor/infrastructure/safe_save.dart';
 
 void main() {
   late Directory directory;
 
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('mushaaeshi-edit-test-');
+    directory = await Directory.systemTemp.createTemp('mushagaeshi-edit-test-');
   });
 
   tearDown(() async {

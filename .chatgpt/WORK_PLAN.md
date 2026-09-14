@@ -119,13 +119,13 @@
 
 ### 2026-09-14 Release 0.1.0 UI revision
 
-- Adopted the exact application name **Mushaaeshi Binary Editor** for the macOS bundle, executable, native window, application menu, Flutter UI and public README. The existing bundle identifier remains unchanged for app identity continuity.
+- Adopted the corrected application name **Mushagaeshi Binary Editor** for the macOS bundle, executable, native window, application menu, Flutter UI and public README. The existing bundle identifier remains unchanged for app identity continuity.
 - Converted the README and all application-owned UI, dialog, error, status and accessibility text to English. Localization remains deferred.
 - Removed the redundant in-content application title row. Open Sample was retained at this intermediate revision and removed in the final 0.1.0 revision below.
 - Added synchronized vertical mouse-wheel and two-finger trackpad scrolling directly over either binary pane, including narrow layouts with horizontal overflow. Added regression coverage for both panes at 1440 px and 980 px window widths.
-- Added `tool/build_macos.sh` to create the standalone application at `dist/Mushaaeshi Binary Editor.app`.
+- Added `tool/build_macos.sh` to create the standalone application at `dist/Mushagaeshi Binary Editor.app`.
 - Validation completed: Flutter static analysis reported no issues; all 12 tests passed; a fresh macOS Release build succeeded. Native UI inspection confirmed English labels, the 24-byte/four-range sample result, and synchronized scrolling from each pane.
-- Bundle verification completed: display name, bundle name and executable are `Mushaaeshi Binary Editor`; development region is English; the executable is arm64; strict deep code-signature verification passes with the expected local ad-hoc signature. Public distribution signing and notarization remain future release work.
+- Bundle verification completed: display name, bundle name and executable are `Mushagaeshi Binary Editor`; development region is English; the executable is arm64; strict deep code-signature verification passes with the expected local ad-hoc signature. Public distribution signing and notarization remain future release work.
 
 ### 2026-09-14 Native scrolling and file drop follow-up
 
@@ -157,3 +157,9 @@
 - Added Save and Save As with native macOS save panels, streamed same-directory temporary output, flush-before-replace, external-change confirmation and English failure messages.
 - Added Save / Discard / Cancel protection for replacing dirty panes and closing the window. Rejects opening or saving over the file in the opposite pane.
 - Updated both macOS sandbox configurations from user-selected read-only to narrowly scoped user-selected read/write; no broader filesystem entitlement was added.
+- Hardened packaging by applying only `Release.entitlements` to the outer ad-hoc signature, removing the build system's debug-only `get-task-allow` entitlement from the packaged app.
+
+### 2026-09-14 Product name spelling correction
+
+- Replaced the mistaken “Mushaaeshi” spelling with “Mushagaeshi” throughout repository source, package metadata, tests, scripts, documentation and macOS product settings.
+- Kept the existing correctly spelled bundle identifier for compatibility while standardizing the external product name as **Mushagaeshi Binary Editor**.

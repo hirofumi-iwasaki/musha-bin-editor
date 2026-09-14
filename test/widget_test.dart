@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushaaeshi_binary_editor/main.dart';
+import 'package:mushagaeshi_binary_editor/main.dart';
 
 void main() {
   testWidgets('empty prototype offers file selection without overflow', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(1280, 800));
-    await tester.pumpWidget(const MushaaeshiBinaryEditorApp());
+    await tester.pumpWidget(const MushagaeshiBinaryEditorApp());
     await tester.pumpAndSettle();
     expect(find.text('Open Left'), findsOneWidget);
     expect(find.text('Open Right'), findsOneWidget);

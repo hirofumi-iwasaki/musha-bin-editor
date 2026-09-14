@@ -120,7 +120,7 @@ class CompareController extends ChangeNotifier {
   Future<void> loadBenchmarkFixture() async {
     try {
       _benchmarkDirectory ??= await Directory.systemTemp.createTemp(
-        'mushaaeshi-benchmark-',
+        'mushagaeshi-benchmark-',
       );
       final a = Uint8List.fromList(List.generate(4096, (i) => i % 256));
       final b = Uint8List.fromList([

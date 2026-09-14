@@ -1,4 +1,4 @@
-# Mushaaeshi Binary Editor
+# Mushagaeshi Binary Editor
 
 A side-by-side hexadecimal binary viewer and comparison app for macOS.
 
@@ -19,13 +19,13 @@ Development uses Flutter 3.47.4, Dart 3.13.3 and Xcode. See `.flutter-version` f
 The locally packaged application is available at:
 
 ```text
-dist/Mushaaeshi Binary Editor.app
+dist/Mushagaeshi Binary Editor.app
 ```
 
 Double-click the app in Finder, or run:
 
 ```sh
-open 'dist/Mushaaeshi Binary Editor.app'
+open 'dist/Mushagaeshi Binary Editor.app'
 ```
 
 You can copy the `.app` to your Applications folder. The current build is signed for local testing, not yet signed with a distribution identity or notarized for public release.
@@ -90,10 +90,10 @@ For a build without the packaging step:
 
 ```sh
 .tooling/flutter/bin/flutter build macos --release
-open 'build/macos/Build/Products/Release/Mushaaeshi Binary Editor.app'
+open 'build/macos/Build/Products/Release/Mushagaeshi Binary Editor.app'
 ```
 
-The existing bundle identifier, `dev.mushagaeshi.mushagaeshiBinDiff`, is retained as the app's stable internal identity. Its displayed name and executable are **Mushaaeshi Binary Editor**.
+The existing bundle identifier, `dev.mushagaeshi.mushagaeshiBinDiff`, is retained as the app's stable internal identity. Its displayed name and executable are **Mushagaeshi Binary Editor**.
 
 ## Validation
 

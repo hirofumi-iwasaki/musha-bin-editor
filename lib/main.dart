@@ -14,13 +14,13 @@ import 'application/compare_controller.dart';
 import 'infrastructure/safe_save.dart';
 import 'presentation/hex_pane.dart';
 
-void main() => runApp(const MushaaeshiBinaryEditorApp());
+void main() => runApp(const MushagaeshiBinaryEditorApp());
 
-class MushaaeshiBinaryEditorApp extends StatelessWidget {
-  const MushaaeshiBinaryEditorApp({super.key});
+class MushagaeshiBinaryEditorApp extends StatelessWidget {
+  const MushagaeshiBinaryEditorApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Mushaaeshi Binary Editor',
+    title: 'Mushagaeshi Binary Editor',
     locale: const Locale('en'),
     supportedLocales: const [Locale('en')],
     debugShowCheckedModeBanner: false,
@@ -55,7 +55,7 @@ class _CompareWindowState extends State<CompareWindow> {
   final leftPaneKey = GlobalKey();
   final rightPaneKey = GlobalKey();
   final verticalScroll = ScrollController();
-  static const platform = MethodChannel('mushaaeshi/files');
+  static const platform = MethodChannel('mushagaeshi/files');
   bool picking = false;
   bool? hoveredDropLeft;
 
@@ -91,7 +91,7 @@ class _CompareWindowState extends State<CompareWindow> {
     }
 
     debugPrint(
-      'MUSHAAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
+      'MUSHAGAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
     );
     if (mounted) controller.jump(0);
   }

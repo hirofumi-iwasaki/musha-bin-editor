@@ -30,7 +30,7 @@ Future<SaveResult> safelySave({
     final destination = File(destinationPath);
     final directory = destination.parent;
     temporary = File(
-      '${directory.path}/.${destination.uri.pathSegments.last}.mushaaeshi-$pid-${DateTime.now().microsecondsSinceEpoch}.tmp',
+      '${directory.path}/.${destination.uri.pathSegments.last}.mushagaeshi-$pid-${DateTime.now().microsecondsSinceEpoch}.tmp',
     );
     input = await File(sourcePath).open();
     output = temporary.openWrite(mode: FileMode.writeOnly);

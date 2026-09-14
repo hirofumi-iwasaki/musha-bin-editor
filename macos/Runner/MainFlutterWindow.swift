@@ -92,11 +92,11 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     contentViewController = hostController
     setContentSize(NSSize(width: 1440, height: 860))
     minSize = NSSize(width: 980, height: 600)
-    title = "Mushaaeshi Binary Editor"
+    title = "Mushagaeshi Binary Editor"
     delegate = self
     center()
     RegisterGeneratedPlugins(registry: controller)
-    channel = FlutterMethodChannel(name: "mushaaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
+    channel = FlutterMethodChannel(name: "mushagaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
     host.channel = channel
     channel?.setMethodCallHandler { [weak self] call, result in
       guard let self = self else {

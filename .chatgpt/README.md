@@ -1,4 +1,4 @@
-# Mushaaeshi Binary Editor — Project Records
+# Mushagaeshi Binary Editor — Project Records
 
 Updated: 2026-09-14
 
