@@ -1,5 +1,12 @@
 # 作業計画と進捗
 
+## 0.3.0 hash display
+
+- Changed the empty-pane instruction to “Drag file here to open”.
+- Added a hash bar above the status bar with separate values for the left and right files.
+- Added SHA-1 and MD5 selection, with SHA-1 as the default.
+- Hash saved file contents asynchronously and discard stale results after a file or algorithm change.
+
 最終更新: 2026-09-14
 
 ## 現在地

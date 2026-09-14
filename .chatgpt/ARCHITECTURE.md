@@ -1,5 +1,9 @@
 # 設計・開発方針
 
+## File hashes
+
+Hash calculation reads each saved file as a stream in a separate Dart isolate. The controller owns per-pane generation counters so a result from a replaced file or previously selected algorithm cannot be published. Hashes describe on-disk content; unsaved editor changes take effect after saving.
+
 最終更新: 2026-09-14
 
 ## 基本方針

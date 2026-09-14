@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../infrastructure/file_comparison.dart';
+import '../infrastructure/file_hash.dart';
 import '../infrastructure/safe_save.dart';
 
 class CompareController extends ChangeNotifier {
@@ -29,6 +30,9 @@ class CompareController extends ChangeNotifier {
   int diffRuns = 0;
   int processed = 0;
   int elapsedMs = 0;
+  FileHashAlgorithm hashAlgorithm = FileHashAlgorithm.sha1;
+  String? leftHash, rightHash;
+  bool leftHashing = false, rightHashing = false;
   bool leftEditing = false, rightEditing = false;
   final Map<int, int> leftEdits = {}, rightEdits = {};
   final Map<int, int> _leftOriginalValues = {}, _rightOriginalValues = {};
@@ -36,6 +40,8 @@ class CompareController extends ChangeNotifier {
   int _generation = 0;
   int _viewGeneration = 0;
   int _openGeneration = 0;
+  int _leftHashGeneration = 0;
+  int _rightHashGeneration = 0;
   bool _disposed = false;
   Isolate? _worker;
   ReceivePort? _port;
@@ -52,6 +58,53 @@ class CompareController extends ChangeNotifier {
   bool dirty(bool isLeft) => (isLeft ? leftEdits : rightEdits).isNotEmpty;
   bool editing(bool isLeft) => isLeft ? leftEditing : rightEditing;
   String? path(bool isLeft) => (isLeft ? left : right)?.path;
+  String? hash(bool isLeft) => isLeft ? leftHash : rightHash;
+  bool hashing(bool isLeft) => isLeft ? leftHashing : rightHashing;
+  bool get hashesDiffer =>
+      leftHash != null && rightHash != null && leftHash != rightHash;
+
+  void setHashAlgorithm(FileHashAlgorithm value) {
+    if (hashAlgorithm == value) return;
+    hashAlgorithm = value;
+    final l = left;
+    final r = right;
+    if (l != null) unawaited(_calculateHash(l, true));
+    if (r != null) unawaited(_calculateHash(r, false));
+    _notify();
+  }
+
+  Future<void> _calculateHash(PagedFile file, bool isLeft) async {
+    final generation = isLeft ? ++_leftHashGeneration : ++_rightHashGeneration;
+    final algorithm = hashAlgorithm;
+    if (isLeft) {
+      leftHash = null;
+      leftHashing = true;
+    } else {
+      rightHash = null;
+      rightHashing = true;
+    }
+    _notify();
+    String? result;
+    try {
+      result = await calculateFileHash(file.path, algorithm);
+    } catch (_) {
+      result = null;
+    }
+    if (_disposed ||
+        generation != (isLeft ? _leftHashGeneration : _rightHashGeneration) ||
+        algorithm != hashAlgorithm ||
+        file != (isLeft ? left : right)) {
+      return;
+    }
+    if (isLeft) {
+      leftHash = result;
+      leftHashing = false;
+    } else {
+      rightHash = result;
+      rightHashing = false;
+    }
+    _notify();
+  }
 
   Future<bool> _sameFile(String first, String second) async {
     if (first == second) return true;
@@ -84,11 +137,13 @@ class CompareController extends ChangeNotifier {
         leftEdits.clear();
         _leftOriginalValues.clear();
         leftEditing = false;
+        unawaited(_calculateHash(file, true));
       } else {
         right = file;
         rightEdits.clear();
         _rightOriginalValues.clear();
         rightEditing = false;
+        unawaited(_calculateHash(file, false));
       }
       topRow = 0;
       selected = null;
@@ -437,6 +492,8 @@ class CompareController extends ChangeNotifier {
     _disposed = true;
     ++_openGeneration;
     ++_viewGeneration;
+    ++_leftHashGeneration;
+    ++_rightHashGeneration;
     stop(notify: false);
     final fixture = _benchmarkDirectory;
     if (fixture != null) {

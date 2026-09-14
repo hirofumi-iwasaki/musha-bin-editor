@@ -1,10 +1,11 @@
 name: mushagaeshi_binary_editor
 description: Mushagaeshi Binary Editor, a macOS hexadecimal comparison app.
 publish_to: none
-version: 0.2.0+2
+version: 0.3.0+3
 environment:
   sdk: '>=3.13.3 <4.0.0'
 dependencies:
+  crypto: ^3.0.7
   flutter:
     sdk: flutter
 dev_dependencies:

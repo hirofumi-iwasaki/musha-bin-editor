@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mushagaeshi_binary_editor/application/compare_controller.dart';
+import 'package:mushagaeshi_binary_editor/infrastructure/file_hash.dart';
 
 Future<void> idle(CompareController c) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
@@ -11,7 +12,46 @@ Future<void> idle(CompareController c) async {
   }
 }
 
+Future<void> hashesIdle(CompareController c) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (c.leftHashing || c.rightHashing) {
+    if (DateTime.now().isAfter(deadline)) fail('Hash worker did not finish');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+}
+
 void main() {
+  test(
+    'SHA-1 is the default and selecting MD5 recalculates open files',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'mushagaeshi-controller-hash-',
+      );
+      final controller = CompareController();
+      try {
+        final file = File('${directory.path}/abc.bin');
+        await file.writeAsString('abc');
+        await controller.open(file.path, true);
+        await hashesIdle(controller);
+
+        expect(controller.hashAlgorithm, FileHashAlgorithm.sha1);
+        expect(controller.leftHash, 'a9993e364706816aba3e25717850c26c9cd0d89d');
+        expect(controller.hashesDiffer, isFalse);
+        final peer = File('${directory.path}/peer.bin');
+        await peer.writeAsString('different');
+        await controller.open(peer.path, false);
+        await hashesIdle(controller);
+        expect(controller.hashesDiffer, isTrue);
+        controller.setHashAlgorithm(FileHashAlgorithm.md5);
+        await hashesIdle(controller);
+        expect(controller.leftHash, '900150983cd24fb0d6963f7d28e17f72');
+      } finally {
+        controller.dispose();
+        await directory.delete(recursive: true);
+      }
+    },
+  );
+
   test('benchmark fixture, difference navigation and rapid viewport changes stay coherent', () async {
     final c = CompareController();
     addTearDown(c.dispose);
@@ -46,7 +86,9 @@ void main() {
   });
 
   test('external changes invalidate results and clearing a scan does not publish stale results', () async {
-    final dir = await Directory.systemTemp.createTemp('mushagaeshi-controller-');
+    final dir = await Directory.systemTemp.createTemp(
+      'mushagaeshi-controller-',
+    );
     final c = CompareController();
     try {
       final a = File('${dir.path}/a');
