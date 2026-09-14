@@ -10,6 +10,11 @@ import '../core/comparison.dart';
 const hexRowHeight = 25.0;
 const hexHeaderHeight = 30.0;
 
+Color modifiedDifferenceBackground(Brightness brightness) =>
+    brightness == Brightness.dark
+    ? const Color(0xFF743C48)
+    : const Color(0xFFFFD9DD);
+
 class HexLayout {
   HexLayout(this.columns, this.digits, this.width);
   final int columns;
@@ -201,7 +206,9 @@ class HexPainter extends CustomPainter {
   void paint(Canvas canvas, Size canvasSize) {
     final foreground = dark ? const Color(0xFFE1E5ED) : const Color(0xFF243044);
     final muted = dark ? const Color(0xFF929EAE) : const Color(0xFF69778C);
-    final red = dark ? const Color(0xFF743C48) : const Color(0xFFFFD9DD);
+    final red = modifiedDifferenceBackground(
+      dark ? Brightness.dark : Brightness.light,
+    );
     final orange = dark ? const Color(0xFF725329) : const Color(0xFFFFE5B9);
     final rowPaint = Paint()
       ..color = dark ? const Color(0xFF202630) : const Color(0xFFF6F8FB);

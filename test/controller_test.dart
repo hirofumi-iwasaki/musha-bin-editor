@@ -36,6 +36,12 @@ void main() {
 
         expect(controller.hashAlgorithm, FileHashAlgorithm.sha1);
         expect(controller.leftHash, 'a9993e364706816aba3e25717850c26c9cd0d89d');
+        expect(controller.hashesDiffer, isFalse);
+        final peer = File('${directory.path}/peer.bin');
+        await peer.writeAsString('different');
+        await controller.open(peer.path, false);
+        await hashesIdle(controller);
+        expect(controller.hashesDiffer, isTrue);
         controller.setHashAlgorithm(FileHashAlgorithm.md5);
         await hashesIdle(controller);
         expect(controller.leftHash, '900150983cd24fb0d6963f7d28e17f72');

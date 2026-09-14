@@ -60,6 +60,8 @@ class CompareController extends ChangeNotifier {
   String? path(bool isLeft) => (isLeft ? left : right)?.path;
   String? hash(bool isLeft) => isLeft ? leftHash : rightHash;
   bool hashing(bool isLeft) => isLeft ? leftHashing : rightHashing;
+  bool get hashesDiffer =>
+      leftHash != null && rightHash != null && leftHash != rightHash;
 
   void setHashAlgorithm(FileHashAlgorithm value) {
     if (hashAlgorithm == value) return;

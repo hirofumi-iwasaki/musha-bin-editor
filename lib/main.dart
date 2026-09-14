@@ -573,24 +573,42 @@ class _CompareWindowState extends State<CompareWindow> {
         : controller.hashing(left)
         ? 'Calculating…'
         : value ?? 'Unavailable';
+    final highlight = value != null && controller.hashesDiffer;
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Tooltip(
           message: value ?? display,
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: '${left ? 'Left' : 'Right'}: '),
-                TextSpan(
-                  text: display,
-                  style: TextStyle(fontSize: value == null ? 11 : 13),
+          child: Row(
+            children: [
+              Text(
+                '${left ? 'Left' : 'Right'}: ',
+                style: const TextStyle(fontFamily: 'Menlo', fontSize: 11),
+              ),
+              Flexible(
+                child: Container(
+                  key: ValueKey(left ? 'left-hash-value' : 'right-hash-value'),
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: highlight
+                        ? modifiedDifferenceBackground(
+                            Theme.of(context).brightness,
+                          )
+                        : null,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    display,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Menlo',
+                      fontSize: value == null ? 11 : 13,
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: 'Menlo', fontSize: 11),
+              ),
+            ],
           ),
         ),
       ),
