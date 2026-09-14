@@ -18,6 +18,7 @@ Future<SaveResult> safelySave({
   required String destinationPath,
   required Map<int, int> edits,
   bool allowExternalChange = false,
+  Future<void> Function(String stagedPath, String destinationPath)? install,
 }) async {
   RandomAccessFile? input;
   IOSink? output;
@@ -27,10 +28,12 @@ Future<SaveResult> safelySave({
     if (!current.matches(sourceStamp) && !allowExternalChange) {
       return const SaveResult(SaveOutcome.externallyChanged);
     }
-    final destination = File(destinationPath);
-    final directory = destination.parent;
+    // A sandbox extension granted by NSSavePanel covers the selected file, not
+    // arbitrary sibling files in its parent directory. Build the complete
+    // output in the app's temporary directory, then atomically move it to the
+    // user-selected destination.
     temporary = File(
-      '${directory.path}/.${destination.uri.pathSegments.last}.mushagaeshi-$pid-${DateTime.now().microsecondsSinceEpoch}.tmp',
+      '${Directory.systemTemp.path}/mushagaeshi-save-$pid-${DateTime.now().microsecondsSinceEpoch}.tmp',
     );
     input = await File(sourcePath).open();
     output = temporary.openWrite(mode: FileMode.writeOnly);
@@ -60,7 +63,17 @@ Future<SaveResult> safelySave({
       await temporary.delete();
       return const SaveResult(SaveOutcome.externallyChanged);
     }
-    await temporary.rename(destinationPath);
+    if (install != null) {
+      await install(temporary.path, destinationPath);
+    } else {
+      try {
+        await temporary.rename(destinationPath);
+      } on FileSystemException {
+        // A destination on another volume cannot be reached with rename(2).
+        await temporary.copy(destinationPath);
+        await temporary.delete();
+      }
+    }
     return const SaveResult(SaveOutcome.saved);
   } catch (error) {
     return SaveResult(SaveOutcome.failed, 'Unable to save file: $error');

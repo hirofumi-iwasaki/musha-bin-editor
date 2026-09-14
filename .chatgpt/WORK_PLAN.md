@@ -154,10 +154,11 @@
 
 - Added independent Edit ON/OFF state, two-digit HEX byte overwrite, pending-nibble cancellation, edited-byte underlines and per-pane dirty indicators.
 - Applied sparse edits to viewport reads and background comparison so difference colors/counts update from in-memory content.
-- Added Save and Save As with native macOS save panels, streamed same-directory temporary output, flush-before-replace, external-change confirmation and English failure messages.
+- Added Save and Save As with native macOS save panels, staged temporary output, native destination replacement, external-change confirmation and English failure messages.
 - Added Save / Discard / Cancel protection for replacing dirty panes and closing the window. Rejects opening or saving over the file in the opposite pane.
 - Updated both macOS sandbox configurations from user-selected read-only to narrowly scoped user-selected read/write; no broader filesystem entitlement was added.
 - Hardened packaging by applying only `Release.entitlements` to the outer ad-hoc signature, removing the build system's debug-only `get-task-allow` entitlement from the packaged app.
+- Repaired Save As after native testing exposed a sandbox failure: the original implementation attempted to create a sibling temporary file outside the exact path authorized by `NSSavePanel`. Output is now staged in the app temporary directory and installed through the native macOS layer. Native Save Left As verification confirmed byte-identical output, destination-name adoption and the Saved status; static analysis and all 19 tests pass.
 
 ### 2026-09-14 Product name spelling correction
 

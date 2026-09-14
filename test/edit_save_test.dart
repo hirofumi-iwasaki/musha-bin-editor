@@ -39,9 +39,47 @@ void main() {
       expect(result.outcome, SaveOutcome.saved);
       expect(await File(destination).readAsBytes(), [0x10, 0xAF, 0x30]);
       expect(controller.dirty(true), isFalse);
+      expect(
+        controller.path(true),
+        await File(destination).resolveSymbolicLinks(),
+      );
+      expect(controller.path(true)?.split('/').last, 'saved.bin');
       controller.dispose();
     },
   );
+
+  test('Save As installs the staged file and adopts its destination', () async {
+    final source = File('${directory.path}/source.bin');
+    final destination = '${directory.path}/renamed.bin';
+    await source.writeAsBytes([0x10, 0x20, 0x30]);
+    final controller = CompareController();
+    await controller.open(source.path, true);
+    controller.setEditing(true, true);
+    controller.select(1, true);
+    controller.inputHex('A');
+    controller.inputHex('F');
+    var installed = false;
+
+    final result = await controller.save(
+      true,
+      destination,
+      install: (stagedPath, destinationPath) async {
+        installed = true;
+        expect(destinationPath, destination);
+        await File(stagedPath).rename(destinationPath);
+      },
+    );
+
+    expect(result.outcome, SaveOutcome.saved);
+    expect(installed, isTrue);
+    expect(await File(destination).readAsBytes(), [0x10, 0xAF, 0x30]);
+    expect(
+      controller.path(true),
+      await File(destination).resolveSymbolicLinks(),
+    );
+    expect(controller.dirty(true), isFalse);
+    controller.dispose();
+  });
 
   test('save refuses an externally changed source without approval', () async {
     final source = File('${directory.path}/source.bin');

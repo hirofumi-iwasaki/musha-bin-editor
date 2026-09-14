@@ -283,6 +283,7 @@ class CompareController extends ChangeNotifier {
     bool isLeft,
     String destination, {
     bool allowExternalChange = false,
+    Future<void> Function(String stagedPath, String destinationPath)? install,
   }) async {
     final file = isLeft ? left : right;
     if (file == null) {
@@ -301,6 +302,7 @@ class CompareController extends ChangeNotifier {
       destinationPath: destination,
       edits: isLeft ? leftEdits : rightEdits,
       allowExternalChange: allowExternalChange,
+      install: install,
     );
     if (result.outcome == SaveOutcome.saved) {
       await open(destination, isLeft);

@@ -241,7 +241,11 @@ class _CompareWindowState extends State<CompareWindow> {
       });
       if (destination == null) return false;
     }
-    var result = await controller.save(left, destination);
+    var result = await controller.save(
+      left,
+      destination,
+      install: _installSavedFile,
+    );
     if (result.outcome == SaveOutcome.externallyChanged && mounted) {
       final overwrite = await showDialog<bool>(
         context: context,
@@ -268,10 +272,26 @@ class _CompareWindowState extends State<CompareWindow> {
           left,
           destination,
           allowExternalChange: true,
+          install: _installSavedFile,
         );
       }
     }
+    if (result.outcome == SaveOutcome.failed && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message ?? 'Unable to save file.')),
+      );
+    }
     return result.outcome == SaveOutcome.saved;
+  }
+
+  Future<void> _installSavedFile(
+    String stagedPath,
+    String destinationPath,
+  ) async {
+    await platform.invokeMethod<void>('installSavedFile', {
+      'stagedPath': stagedPath,
+      'destinationPath': destinationPath,
+    });
   }
 
   Future<void> goTo() async {

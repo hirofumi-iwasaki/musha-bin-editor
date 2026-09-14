@@ -123,6 +123,34 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
         }
         return
       }
+      if call.method == "installSavedFile" {
+        guard
+          let arguments = call.arguments as? [String: String],
+          let stagedPath = arguments["stagedPath"],
+          let destinationPath = arguments["destinationPath"]
+        else {
+          result(FlutterError(code: "invalid-save", message: "The save request is incomplete.", details: nil))
+          return
+        }
+        let stagedURL = URL(fileURLWithPath: stagedPath)
+        let destinationURL = URL(fileURLWithPath: destinationPath)
+        do {
+          if FileManager.default.fileExists(atPath: destinationPath) {
+            _ = try FileManager.default.replaceItemAt(
+              destinationURL,
+              withItemAt: stagedURL,
+              backupItemName: nil,
+              options: []
+            )
+          } else {
+            try FileManager.default.moveItem(at: stagedURL, to: destinationURL)
+          }
+          result(nil)
+        } catch {
+          result(FlutterError(code: "save-failed", message: "Unable to install the saved file: \(error.localizedDescription)", details: nil))
+        }
+        return
+      }
       guard call.method == "openFile" else {
         result(FlutterMethodNotImplemented)
         return

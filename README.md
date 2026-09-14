@@ -45,7 +45,7 @@ Select **Open Left** and **Open Right** to compare files, or drop one Finder fil
 - Click to select a byte; arrow keys, Page Up/Down and Home/End for navigation
 - Explicit Edit ON/OFF control for each pane; enter two hexadecimal digits to overwrite the selected byte
 - Per-pane unsaved-change indicators and immediate comparison updates
-- Save and Save As, with same-directory temporary-file replacement and external-change confirmation
+- Save and Save As, with staged native replacement and external-change confirmation
 - Save / Discard / Cancel protection when replacing an edited file or closing the window
 - Comparison progress, cancellation, re-comparison and external-change detection
 - English controls, status messages, dialogs and accessibility labels
@@ -120,7 +120,7 @@ Comparison uses absolute offsets. Insertions and deletions are not realigned. Te
 
 Difference navigation currently scans from the start to the required range, which can take time near the end of large files. A block index is planned. Display reads use a 64 KiB page cache, comparison reads use 1 MiB blocks, and the bounded text-layout cache holds up to 2,048 entries. The app does not construct a widget for every byte or retain an unbounded list of difference ranges.
 
-External-change detection checks file size and timestamps during reads, comparisons and saving. Save refuses an externally changed source until the user explicitly confirms overwrite. Saving streams the source through an edited-byte overlay into a temporary file in the destination directory, flushes it and replaces the destination only after successful output.
+External-change detection checks file size and timestamps during reads, comparisons and saving. Save refuses an externally changed source until the user explicitly confirms overwrite. Saving streams the source through an edited-byte overlay into the app's temporary directory, flushes it and asks the native macOS layer to replace the exact user-selected destination only after successful output.
 
 Accessibility labels describe editing state and the selected byte and identify each file-drop target. Full VoiceOver operation remains unverified. Range selection, copying/pasting and undo/redo are not implemented yet; editing remains fixed-size byte overwrite only.
 
