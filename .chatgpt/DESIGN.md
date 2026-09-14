@@ -1,4 +1,4 @@
-# Mushaaeshi Binary Editor 詳細設計
+# Mushagaeshi Binary Editor 詳細設計
 
 作成日: 2026-09-13
 状態: 2026-09-13にユーザーが初期開発の方針として採用。決定事項はDECISIONS.mdに集約。性能目標・容量等の暫定数値と実機検証事項は未確定であり、実装・評価で調整する。
@@ -30,7 +30,7 @@ ASCIIは0x20〜0x7Eをそのまま表示し、それ以外は「.」。初期版
 
 概略（実装画面ではなく構造案）:
 
-    Mushaaeshi Binary Editor
+    Mushagaeshi Binary Editor
     [左を開く] [右を開く]  [前の差分] [次の差分] [移動]
     ┌ 左: original.bin    [編集 OFF] ┬ 右: modified.bin * [編集 ON] ┐
     │ offset  HEX            ASCII │ offset  HEX            ASCII │

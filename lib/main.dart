@@ -11,15 +11,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'application/compare_controller.dart';
+import 'infrastructure/safe_save.dart';
 import 'presentation/hex_pane.dart';
 
-void main() => runApp(const MushaaeshiBinaryEditorApp());
+void main() => runApp(const MushagaeshiBinaryEditorApp());
 
-class MushaaeshiBinaryEditorApp extends StatelessWidget {
-  const MushaaeshiBinaryEditorApp({super.key});
+class MushagaeshiBinaryEditorApp extends StatelessWidget {
+  const MushagaeshiBinaryEditorApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Mushaaeshi Binary Editor',
+    title: 'Mushagaeshi Binary Editor',
     locale: const Locale('en'),
     supportedLocales: const [Locale('en')],
     debugShowCheckedModeBanner: false,
@@ -54,7 +55,7 @@ class _CompareWindowState extends State<CompareWindow> {
   final leftPaneKey = GlobalKey();
   final rightPaneKey = GlobalKey();
   final verticalScroll = ScrollController();
-  static const platform = MethodChannel('mushaaeshi/files');
+  static const platform = MethodChannel('mushagaeshi/files');
   bool picking = false;
   bool? hoveredDropLeft;
 
@@ -90,7 +91,7 @@ class _CompareWindowState extends State<CompareWindow> {
     }
 
     debugPrint(
-      'MUSHAAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
+      'MUSHAGAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
     );
     if (mounted) controller.jump(0);
   }
@@ -134,7 +135,9 @@ class _CompareWindowState extends State<CompareWindow> {
           'Drop the file on the left or right binary pane.',
         );
       } else {
-        await controller.open(arguments['path'] as String, side);
+        if (await _confirmReplace(side)) {
+          await controller.open(arguments['path'] as String, side);
+        }
       }
       if (mounted) setState(() => hoveredDropLeft = null);
     } else if (call.method == 'fileDragUpdated') {
@@ -157,7 +160,45 @@ class _CompareWindowState extends State<CompareWindow> {
         message is String ? message : 'Unable to open the dropped file.',
       );
       if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
+    } else if (call.method == 'requestClose') {
+      if (await _confirmBothDirty()) {
+        await platform.invokeMethod<void>('confirmClose');
+      }
     }
+  }
+
+  Future<bool> _confirmBothDirty() async {
+    if (controller.dirty(true) && !await _confirmReplace(true)) return false;
+    if (controller.dirty(false) && !await _confirmReplace(false)) return false;
+    return true;
+  }
+
+  Future<bool> _confirmReplace(bool left) async {
+    if (!controller.dirty(left)) return true;
+    final action = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text('Save changes to the ${left ? 'left' : 'right'} file?'),
+        content: const Text('Unsaved edits will be lost if you discard them.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'cancel'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'discard'),
+            child: const Text('Discard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'save'),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (action == 'save') return save(left, saveAs: false);
+    return action == 'discard';
   }
 
   bool? _dropSideAt(Offset point) {
@@ -172,6 +213,7 @@ class _CompareWindowState extends State<CompareWindow> {
 
   Future<void> open(bool left) async {
     if (picking) return;
+    if (!await _confirmReplace(left)) return;
     setState(() => picking = true);
     try {
       final path = await platform.invokeMethod<String>('openFile', {
@@ -187,6 +229,69 @@ class _CompareWindowState extends State<CompareWindow> {
     } finally {
       if (mounted) setState(() => picking = false);
     }
+  }
+
+  Future<bool> save(bool left, {required bool saveAs}) async {
+    var destination = controller.path(left);
+    if (destination == null) return false;
+    if (saveAs) {
+      destination = await platform.invokeMethod<String>('saveFile', {
+        'side': left ? 'Left' : 'Right',
+        'name': destination.split('/').last,
+      });
+      if (destination == null) return false;
+    }
+    var result = await controller.save(
+      left,
+      destination,
+      install: _installSavedFile,
+    );
+    if (result.outcome == SaveOutcome.externallyChanged && mounted) {
+      final overwrite = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('File changed outside the app'),
+          content: const Text(
+            'Overwrite the externally changed file with the current edited content?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Overwrite'),
+            ),
+          ],
+        ),
+      );
+      if (overwrite == true) {
+        result = await controller.save(
+          left,
+          destination,
+          allowExternalChange: true,
+          install: _installSavedFile,
+        );
+      }
+    }
+    if (result.outcome == SaveOutcome.failed && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message ?? 'Unable to save file.')),
+      );
+    }
+    return result.outcome == SaveOutcome.saved;
+  }
+
+  Future<void> _installSavedFile(
+    String stagedPath,
+    String destinationPath,
+  ) async {
+    await platform.invokeMethod<void>('installSavedFile', {
+      'stagedPath': stagedPath,
+      'destinationPath': destinationPath,
+    });
   }
 
   Future<void> goTo() async {
@@ -265,6 +370,16 @@ class _CompareWindowState extends State<CompareWindow> {
       return KeyEventResult.ignored;
     }
     final k = event.logicalKey;
+    if (k == LogicalKeyboardKey.escape) {
+      controller.cancelPending();
+      return KeyEventResult.handled;
+    }
+    final character = event.character;
+    if (character != null &&
+        character.length == 1 &&
+        RegExp(r'[0-9a-fA-F]').hasMatch(character)) {
+      if (controller.inputHex(character)) return KeyEventResult.handled;
+    }
     if (k == LogicalKeyboardKey.pageDown) {
       controller.scrollTo(controller.topRow + controller.visibleRows);
       return KeyEventResult.handled;
@@ -369,7 +484,7 @@ class _CompareWindowState extends State<CompareWindow> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : file.path.split('/').last}',
+                            '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : '${file.path.split('/').last}${controller.dirty(left) ? ' *' : ''}'}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -380,13 +495,38 @@ class _CompareWindowState extends State<CompareWindow> {
                               file == null
                                   ? 'Choose Open ${left ? 'Left' : 'Right'}'
                                   : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const Text('Read-only', style: TextStyle(fontSize: 11)),
+                    Switch(
+                      value: controller.editing(left),
+                      onChanged: file == null
+                          ? null
+                          : (value) => controller.setEditing(left, value),
+                    ),
+                    Text(
+                      controller.editing(left) ? 'Edit ON' : 'Edit OFF',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    IconButton(
+                      tooltip: 'Save ${left ? 'Left' : 'Right'}',
+                      onPressed: controller.dirty(left)
+                          ? () => save(left, saveAs: false)
+                          : null,
+                      icon: const Icon(Icons.save_outlined, size: 18),
+                    ),
+                    IconButton(
+                      tooltip: 'Save ${left ? 'Left' : 'Right'} As',
+                      onPressed: file == null
+                          ? null
+                          : () => save(left, saveAs: true),
+                      icon: const Icon(Icons.save_as_outlined, size: 18),
+                    ),
                   ],
                 ),
               ),
@@ -406,6 +546,12 @@ class _CompareWindowState extends State<CompareWindow> {
                   selected: controller.selectedLeft == left
                       ? controller.selected
                       : null,
+                  edited: Set.unmodifiable(
+                    left
+                        ? controller.leftEdits.keys
+                        : controller.rightEdits.keys,
+                  ),
+                  editing: controller.editing(left),
                   onSelect: (at) => controller.select(at, left),
                   onVerticalPointerScroll: _pointerScroll,
                   focusNode: left ? leftFocus : rightFocus,

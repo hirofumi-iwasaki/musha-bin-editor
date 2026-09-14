@@ -3,10 +3,10 @@ import 'dart:typed_data';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushaaeshi_binary_editor/application/compare_controller.dart';
-import 'package:mushaaeshi_binary_editor/infrastructure/file_comparison.dart';
-import 'package:mushaaeshi_binary_editor/main.dart';
-import 'package:mushaaeshi_binary_editor/presentation/hex_pane.dart';
+import 'package:mushagaeshi_binary_editor/application/compare_controller.dart';
+import 'package:mushagaeshi_binary_editor/infrastructure/file_comparison.dart';
+import 'package:mushagaeshi_binary_editor/main.dart';
+import 'package:mushagaeshi_binary_editor/presentation/hex_pane.dart';
 
 // Keep file I/O out of gesture tests while exercising the real controller's
 // viewport clamping and the complete window's nested scrollable structure.
@@ -35,7 +35,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: CompareWindow(controller: c)));
       await tester.pumpAndSettle();
       // No extra title row or sample action remains in the product UI.
-      expect(find.text('Mushaaeshi Binary Editor'), findsNothing);
+      expect(find.text('Mushagaeshi Binary Editor'), findsNothing);
       expect(find.text('Open Sample'), findsNothing);
       void expectRow(int row) {
         expect(c.topRow, row);

@@ -3,12 +3,12 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushaaeshi_binary_editor/infrastructure/file_comparison.dart';
+import 'package:mushagaeshi_binary_editor/infrastructure/file_comparison.dart';
 
 void main() {
   late Directory directory;
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('mushaaeshi-test-');
+    directory = await Directory.systemTemp.createTemp('mushagaeshi-test-');
   });
   tearDown(() async {
     await directory.delete(recursive: true);
@@ -57,4 +57,19 @@ void main() {
       port.close();
     },
   );
+
+  test('metadata-only changes do not invalidate an open file', () async {
+    final file = File('${directory.path}/metadata.bin');
+    await file.writeAsBytes([1, 2, 3, 4]);
+    final original = await FileStamp.read(file.path);
+
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await Process.run('chmod', ['400', file.path]);
+    final metadataChanged = await FileStamp.read(file.path);
+
+    expect(metadataChanged.changed, isNot(original.changed));
+    expect(metadataChanged.modified, original.modified);
+    expect(metadataChanged.matches(original), isTrue);
+    expect(await PagedFile(file.path, original).read(0, 4), [1, 2, 3, 4]);
+  });
 }

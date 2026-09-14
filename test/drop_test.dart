@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushaaeshi_binary_editor/application/compare_controller.dart';
-import 'package:mushaaeshi_binary_editor/infrastructure/file_comparison.dart';
-import 'package:mushaaeshi_binary_editor/main.dart';
+import 'package:mushagaeshi_binary_editor/application/compare_controller.dart';
+import 'package:mushagaeshi_binary_editor/infrastructure/file_comparison.dart';
+import 'package:mushagaeshi_binary_editor/main.dart';
 
 class DropRecordingController extends CompareController {
   DropRecordingController() {
@@ -34,7 +34,7 @@ Future<void> sendNativeMethod(MethodCall call) async {
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   await messenger.handlePlatformMessage(
-    'mushaaeshi/files',
+    'mushagaeshi/files',
     const StandardMethodCodec().encodeMethodCall(call),
     (_) {},
   );

@@ -4,7 +4,7 @@
 
 ## 採用するライセンス
 
-Mushaaeshi Binary EditorはGNU General Public License version 3を採用する。
+Mushagaeshi Binary EditorはGNU General Public License version 3を採用する。
 直前の推奨に沿い、具体的な指定は **GPL-3.0-or-later（GPL第3版またはそれ以降）** とする。
 ユーザーの明示的な決定は「GPL3を採用」。or-laterは、その直前の提案を引き継いだ具体化である。
 

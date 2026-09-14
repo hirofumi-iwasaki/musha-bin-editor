@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../infrastructure/file_comparison.dart';
+import '../infrastructure/safe_save.dart';
 
 class CompareController extends ChangeNotifier {
   PagedFile? left;
@@ -28,6 +29,10 @@ class CompareController extends ChangeNotifier {
   int diffRuns = 0;
   int processed = 0;
   int elapsedMs = 0;
+  bool leftEditing = false, rightEditing = false;
+  final Map<int, int> leftEdits = {}, rightEdits = {};
+  final Map<int, int> _leftOriginalValues = {}, _rightOriginalValues = {};
+  int? pendingNibble;
   int _generation = 0;
   int _viewGeneration = 0;
   int _openGeneration = 0;
@@ -44,6 +49,18 @@ class CompareController extends ChangeNotifier {
   int get offset => topRow * bytesPerRow;
   bool get pair => left != null && right != null;
   bool get canCompare => pair && !invalid;
+  bool dirty(bool isLeft) => (isLeft ? leftEdits : rightEdits).isNotEmpty;
+  bool editing(bool isLeft) => isLeft ? leftEditing : rightEditing;
+  String? path(bool isLeft) => (isLeft ? left : right)?.path;
+
+  Future<bool> _sameFile(String first, String second) async {
+    if (first == second) return true;
+    try {
+      return await FileSystemEntity.identical(first, second);
+    } on FileSystemException {
+      return false;
+    }
+  }
 
   void _notify() {
     if (!_disposed) notifyListeners();
@@ -53,13 +70,25 @@ class CompareController extends ChangeNotifier {
     final ticket = ++_openGeneration;
     try {
       final canonical = await File(path).resolveSymbolicLinks();
+      final other = isLeft ? right : left;
+      if (other != null && await _sameFile(canonical, other.path)) {
+        error = 'This file is already open in the other pane. Open a copy to edit it independently.';
+        _notify();
+        return;
+      }
       final file = PagedFile(canonical, await FileStamp.read(canonical));
       if (_disposed || ticket != _openGeneration) return;
       stop(notify: false);
       if (isLeft) {
         left = file;
+        leftEdits.clear();
+        _leftOriginalValues.clear();
+        leftEditing = false;
       } else {
         right = file;
+        rightEdits.clear();
+        _rightOriginalValues.clear();
+        rightEditing = false;
       }
       topRow = 0;
       selected = null;
@@ -91,7 +120,7 @@ class CompareController extends ChangeNotifier {
   Future<void> loadBenchmarkFixture() async {
     try {
       _benchmarkDirectory ??= await Directory.systemTemp.createTemp(
-        'mushaaeshi-benchmark-',
+        'mushagaeshi-benchmark-',
       );
       final a = Uint8List.fromList(List.generate(4096, (i) => i % 256));
       final b = Uint8List.fromList([
@@ -138,6 +167,16 @@ class CompareController extends ChangeNotifier {
         if (_disposed || ticket != _viewGeneration) return;
         leftBytes = bytes[0];
         rightBytes = bytes[1];
+        for (final entry in leftEdits.entries) {
+          if (entry.key >= at && entry.key < at + leftBytes.length) {
+            leftBytes[entry.key - at] = entry.value;
+          }
+        }
+        for (final entry in rightEdits.entries) {
+          if (entry.key >= at && entry.key < at + rightBytes.length) {
+            rightBytes[entry.key - at] = entry.value;
+          }
+        }
         loading = false;
       } catch (e) {
         if (_disposed || ticket != _viewGeneration) return;
@@ -179,7 +218,101 @@ class CompareController extends ChangeNotifier {
     if (at < 0 || at >= size) return;
     selected = at;
     selectedLeft = isLeft;
+    pendingNibble = null;
     _notify();
+  }
+
+  void setEditing(bool isLeft, bool enabled) {
+    if (isLeft) {
+      leftEditing = enabled;
+    } else {
+      rightEditing = enabled;
+    }
+    pendingNibble = null;
+    status = enabled
+        ? '${isLeft ? 'Left' : 'Right'} editing enabled'
+        : '${isLeft ? 'Left' : 'Right'} editing disabled';
+    _notify();
+  }
+
+  bool inputHex(String character) {
+    if (selected == null || !editing(selectedLeft)) return false;
+    final digit = int.tryParse(character, radix: 16);
+    if (digit == null) return false;
+    if (pendingNibble == null) {
+      pendingNibble = digit;
+      status = 'Enter second hex digit: ${character.toUpperCase()}_';
+      _notify();
+      return true;
+    }
+    final value = pendingNibble! * 16 + digit;
+    pendingNibble = null;
+    final edits = selectedLeft ? leftEdits : rightEdits;
+    final at = selected!;
+    final originals = selectedLeft ? _leftOriginalValues : _rightOriginalValues;
+    final visible = selectedLeft ? leftBytes : rightBytes;
+    final index = at - offset;
+    if (!originals.containsKey(at) && index >= 0 && index < visible.length) {
+      originals[at] = visible[index];
+    }
+    if (originals[at] == value) {
+      edits.remove(at);
+      originals.remove(at);
+    } else {
+      edits[at] = value;
+    }
+    status = 'Edited 0x${at.toRadixString(16).toUpperCase()}';
+    final size = (selectedLeft ? left : right)!.stamp.size;
+    selected = math.min(size - 1, at + 1);
+    unawaited(
+      refresh().then((_) {
+        if (pair) unawaited(compare());
+      }),
+    );
+    return true;
+  }
+
+  void cancelPending() {
+    if (pendingNibble == null) return;
+    pendingNibble = null;
+    status = 'Hex input canceled';
+    _notify();
+  }
+
+  Future<SaveResult> save(
+    bool isLeft,
+    String destination, {
+    bool allowExternalChange = false,
+    Future<void> Function(String stagedPath, String destinationPath)? install,
+  }) async {
+    final file = isLeft ? left : right;
+    if (file == null) {
+      return const SaveResult(SaveOutcome.failed, 'No file is open.');
+    }
+    final other = isLeft ? right : left;
+    if (other != null && await _sameFile(destination, other.path)) {
+      return const SaveResult(
+        SaveOutcome.failed,
+        'The other pane already has this file open. Choose another destination.',
+      );
+    }
+    final result = await safelySave(
+      sourcePath: file.path,
+      sourceStamp: file.stamp,
+      destinationPath: destination,
+      edits: isLeft ? leftEdits : rightEdits,
+      allowExternalChange: allowExternalChange,
+      install: install,
+    );
+    if (result.outcome == SaveOutcome.saved) {
+      await open(destination, isLeft);
+      status = 'Saved ${destination.split('/').last}';
+      _notify();
+    } else if (result.message != null) {
+      error = result.message;
+      _notify();
+    }
+    return result;
   }
 
   void jump(int at) {
@@ -263,6 +396,8 @@ class CompareController extends ChangeNotifier {
         'right': right!.path,
         'leftStamp': left!.stamp,
         'rightStamp': right!.stamp,
+        'leftEdits': leftEdits,
+        'rightEdits': rightEdits,
         if (forward != null)
           'cursor': selected ?? (forward ? offset - 1 : offset),
         'forward': ?forward,
