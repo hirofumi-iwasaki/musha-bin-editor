@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'application/compare_controller.dart';
+import 'infrastructure/file_hash.dart';
 import 'infrastructure/safe_save.dart';
 import 'presentation/hex_pane.dart';
 
@@ -564,6 +565,30 @@ class _CompareWindowState extends State<CompareWindow> {
     );
   }
 
+  Widget hashValue(bool left) {
+    final file = left ? controller.left : controller.right;
+    final value = controller.hash(left);
+    final display = file == null
+        ? 'No file'
+        : controller.hashing(left)
+        ? 'Calculating…'
+        : value ?? 'Unavailable';
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Tooltip(
+          message: value ?? display,
+          child: Text(
+            '${left ? 'Left' : 'Right'}: $display',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontFamily: 'Menlo', fontSize: 11),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
@@ -717,6 +742,59 @@ class _CompareWindowState extends State<CompareWindow> {
                         ),
                       );
                     },
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(context).dividerColor
+                            .withValues(alpha: 0.2),
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      const Text('Hash', style: TextStyle(fontSize: 12)),
+                      const SizedBox(width: 8),
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<FileHashAlgorithm>(
+                          value: controller.hashAlgorithm,
+                          isDense: true,
+                          items: FileHashAlgorithm.values
+                              .map(
+                                (algorithm) => DropdownMenuItem(
+                                  value: algorithm,
+                                  child: Text(algorithm.label),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (algorithm) {
+                            if (algorithm != null) {
+                              controller.setHashAlgorithm(algorithm);
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: Theme.of(context).dividerColor
+                            .withValues(alpha: 0.2),
+                      ),
+                      hashValue(true),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: Theme.of(context).dividerColor
+                            .withValues(alpha: 0.2),
+                      ),
+                      hashValue(false),
+                    ],
                   ),
                 ),
                 Container(

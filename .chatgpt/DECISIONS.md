@@ -1,5 +1,11 @@
 # 決定事項と要件
 
+## Version 0.3.0
+
+- Show the saved on-disk hash for each open file in a dedicated bar above the status bar.
+- Support SHA-1 and MD5, with SHA-1 selected by default.
+- Recalculate hashes after opening, saving, or changing the selected algorithm.
+
 最終更新: 2026-09-14
 
 ## 1. 目的と確定方針

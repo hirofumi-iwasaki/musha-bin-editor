@@ -150,7 +150,9 @@ class HexPane extends StatelessWidget {
                           dark: Theme.of(context).brightness == Brightness.dark,
                         ),
                         child: !hasFile
-                            ? const Center(child: Text('Open a file to begin'))
+                            ? const Center(
+                                child: Text('Drag file here to open'),
+                              )
                             : invalid
                             ? const Center(
                                 child: Text('Read error · Reopen the file'),

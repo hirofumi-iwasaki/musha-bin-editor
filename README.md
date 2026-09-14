@@ -4,7 +4,7 @@ A side-by-side hexadecimal binary viewer and comparison app for macOS.
 
 Repository: [hirofumi-iwasaki/musha-bin-editor](https://github.com/hirofumi-iwasaki/musha-bin-editor)
 
-Version 0.2.0 adds explicit per-pane hexadecimal editing and safe saving to the side-by-side comparison viewer. The application and its README use English. Language selection and localization are deferred.
+Version 0.3.0 adds per-file SHA-1 and MD5 hash display to the side-by-side comparison and editing features. The application and its README use English. Language selection and localization are deferred.
 
 ## Requirements
 
@@ -39,6 +39,7 @@ Select **Open Left** and **Open Right** to compare files, or drop one Finder fil
 - Missing bytes shown as `--`, distinct from a zero byte
 - Synchronized vertical scrolling using Flutter's standard macOS mouse-wheel, two-finger trackpad and scrollbar behavior, including the system natural-scrolling direction
 - Finder drag-and-drop: drop one file on the left or right binary pane to open it on that side
+- Per-file SHA-1 or MD5 values in a dedicated hash bar; SHA-1 is selected by default
 - Horizontal scrolling when a pane is too narrow to show all columns
 - Eight or sixteen bytes per row
 - Previous/next difference range and hexadecimal offset navigation
@@ -66,6 +67,8 @@ The extra in-content title row has been removed to leave more space for binary d
 | Cancel first hex digit | Escape |
 
 Offsets are hexadecimal, for example `400` or `0x400`.
+
+The hash bar reports the saved file contents on disk. Select **SHA-1** or **MD5** from its dropdown; saving or opening a file recalculates the value.
 
 ## Development and packaging
 
