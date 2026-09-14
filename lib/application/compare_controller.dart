@@ -22,7 +22,7 @@ class CompareController extends ChangeNotifier {
   bool busy = false;
   bool complete = false;
   bool invalid = false;
-  String status = 'Open two files or try the sample';
+  String status = 'Open two files to compare';
   String? error;
   int diffBytes = 0;
   int diffRuns = 0;
@@ -35,7 +35,7 @@ class CompareController extends ChangeNotifier {
   Isolate? _worker;
   ReceivePort? _port;
   StreamSubscription<dynamic>? _subscription;
-  Directory? _demoDirectory;
+  Directory? _benchmarkDirectory;
   Future<void> _readQueue = Future.value();
 
   int get length => math.max(left?.stamp.size ?? 0, right?.stamp.size ?? 0);
@@ -88,10 +88,10 @@ class CompareController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> demo() async {
+  Future<void> loadBenchmarkFixture() async {
     try {
-      _demoDirectory ??= await Directory.systemTemp.createTemp(
-        'mushaaeshi-demo-',
+      _benchmarkDirectory ??= await Directory.systemTemp.createTemp(
+        'mushaaeshi-benchmark-',
       );
       final a = Uint8List.fromList(List.generate(4096, (i) => i % 256));
       final b = Uint8List.fromList([
@@ -105,8 +105,8 @@ class CompareController extends ChangeNotifier {
       b[0x3FF] = 0;
       b[0x400] = 0xEE;
       b[0x401] = 0;
-      final lp = '${_demoDirectory!.path}/original.bin';
-      final rp = '${_demoDirectory!.path}/modified.bin';
+      final lp = '${_benchmarkDirectory!.path}/original.bin';
+      final rp = '${_benchmarkDirectory!.path}/modified.bin';
       await File(lp).writeAsBytes(a);
       await File(rp).writeAsBytes(b);
       await open(lp, true);
@@ -303,9 +303,9 @@ class CompareController extends ChangeNotifier {
     ++_openGeneration;
     ++_viewGeneration;
     stop(notify: false);
-    final demo = _demoDirectory;
-    if (demo != null) {
-      unawaited(demo.delete(recursive: true).catchError((_) => demo));
+    final fixture = _benchmarkDirectory;
+    if (fixture != null) {
+      unawaited(fixture.delete(recursive: true).catchError((_) => fixture));
     }
     super.dispose();
   }

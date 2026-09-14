@@ -110,7 +110,7 @@ macOS限定で開始するという最新方針を優先する。以下は過去
 
 - Use the exact application name **Mushaaeshi Binary Editor** in the macOS bundle, window, app menu, executable and README.
 - Use English for all application-owned UI text, dialogs, accessibility labels and README content. Defer language selection/localization.
-- Remove the redundant in-content title row. Keep Open Sample in the toolbar.
+- Remove the redundant in-content title row and the Open Sample action.
 - Handle mouse-wheel and two-finger trackpad input directly over either binary pane and synchronize vertical scrolling.
 - Package a standalone macOS application at `dist/Mushaaeshi Binary Editor.app`; keep generated binaries outside Git.
 - Retain the existing bundle identifier for continuity of macOS app identity.

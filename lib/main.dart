@@ -65,13 +65,11 @@ class _CompareWindowState extends State<CompareWindow> {
     platform.setMethodCallHandler(_handlePlatformCall);
     if (const bool.fromEnvironment('BENCHMARK')) {
       unawaited(benchmark());
-    } else if (const bool.fromEnvironment('DEMO')) {
-      unawaited(controller.demo());
     }
   }
 
   Future<void> benchmark() async {
-    await controller.demo();
+    await controller.loadBenchmarkFixture();
     while (mounted && controller.busy) {
       await Future<void>.delayed(const Duration(milliseconds: 30));
     }
@@ -489,10 +487,6 @@ class _CompareWindowState extends State<CompareWindow> {
                         style: const ButtonStyle(
                           visualDensity: VisualDensity.compact,
                         ),
-                      ),
-                      TextButton(
-                        onPressed: picking ? null : controller.demo,
-                        child: const Text('Open Sample'),
                       ),
                       TextButton(
                         onPressed: controller.busy

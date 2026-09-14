@@ -30,7 +30,7 @@ open 'dist/Mushaaeshi Binary Editor.app'
 
 You can copy the `.app` to your Applications folder. The current build is signed for local testing, not yet signed with a distribution identity or notarized for public release.
 
-Select **Open Left** and **Open Right** to compare files, or **Open Sample** to explore a built-in example with 24 differing bytes across four ranges. Opening and comparing files never modifies their contents.
+Select **Open Left** and **Open Right** to compare files, or drop one Finder file onto each binary pane. Opening and comparing files never modifies their contents.
 
 ## Features
 
@@ -100,7 +100,7 @@ flutter run -d macos --profile --dart-define=BENCHMARK=true
 
 Tests cover comparison boundaries, navigation, external modifications, stale display requests, native file-drop messages and wheel/trackpad scrolling over both binary panes. The scrolling tests also exercise narrow panes with horizontal overflow.
 
-The comparison benchmark creates temporary file pairs and removes them afterwards. The 1 GiB case needs approximately 2 GiB of free disk space. Files are compared immediately after creation, so the measurements are affected by the OS cache. The rendering benchmark scrolls the sample 180 times and logs median and 95th-percentile frame build/raster times.
+The comparison benchmark creates temporary file pairs and removes them afterwards. The 1 GiB case needs approximately 2 GiB of free disk space. Files are compared immediately after creation, so the measurements are affected by the OS cache. The rendering benchmark loads an internal generated fixture, scrolls it 180 times and logs median and 95th-percentile frame build/raster times. This fixture is not exposed in the product UI.
 
 ## Architecture and current limitations
 

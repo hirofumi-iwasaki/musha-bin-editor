@@ -121,7 +121,7 @@
 
 - Adopted the exact application name **Mushaaeshi Binary Editor** for the macOS bundle, executable, native window, application menu, Flutter UI and public README. The existing bundle identifier remains unchanged for app identity continuity.
 - Converted the README and all application-owned UI, dialog, error, status and accessibility text to English. Localization remains deferred.
-- Removed the redundant in-content application title row and retained Open Sample in the toolbar.
+- Removed the redundant in-content application title row. Open Sample was retained at this intermediate revision and removed in the final 0.1.0 revision below.
 - Added synchronized vertical mouse-wheel and two-finger trackpad scrolling directly over either binary pane, including narrow layouts with horizontal overflow. Added regression coverage for both panes at 1440 px and 980 px window widths.
 - Added `tool/build_macos.sh` to create the standalone application at `dist/Mushaaeshi Binary Editor.app`.
 - Validation completed: Flutter static analysis reported no issues; all 12 tests passed; a fresh macOS Release build succeeded. Native UI inspection confirmed English labels, the 24-byte/four-range sample result, and synchronized scrolling from each pane.
@@ -142,3 +142,10 @@
 - Moved left/right selection to Flutter hit-testing against the actual rendered pane rectangles. The full pane header and HEX body are targets; areas outside both panes show an English guidance error.
 - Added a primary-color hover border/background for the actual pane under the drag while retaining the English accessibility drop-target labels.
 - Extended tests for native message routing, real pane coordinates, left/right selection, English errors, accessibility labels and hover state. Static analysis is clean and all 13 tests pass. The Release Swift build succeeds and the packaged app launches with the Flutter surface hosted correctly.
+
+### 2026-09-14 Final 0.1.0 sample removal
+
+- Removed Open Sample completely from the product UI and removed its user-facing README/status references.
+- Removed the `DEMO` launch path. The generated file-pair fixture remains as `loadBenchmarkFixture` because controller regression tests and the opt-in rendering benchmark require deterministic data; it is not reachable from normal product UI.
+- Updated widget and scrolling tests to assert that Open Sample is absent while Open Left, Open Right, synchronized scrolling and Finder drop targets remain available.
+- Final validation completed: static analysis reported no issues; all 13 tests passed; a clean macOS Release build and package succeeded after regenerating nested signatures. The packaged executable is arm64 and strict deep code-signature verification passes.

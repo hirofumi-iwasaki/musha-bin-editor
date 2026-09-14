@@ -185,7 +185,7 @@ BzEditorはユーザーが挙げた操作感の参考。今回その実装・ラ
 
 ## Adopted UI refinements — 2026-09-14
 
-English is now the sole application language. The additional content title/banner is removed; the native macOS title bar identifies the app. Open Sample belongs in the main toolbar. Wheel and pan/zoom trackpad input over either binary pane must update the shared vertical viewport, including when the pane overflows horizontally. The `.app` artifact is packaged into `dist/` for direct Finder launch.
+English is now the sole application language. The additional content title/banner and Open Sample action are removed; the native macOS title bar identifies the app. Wheel and pan/zoom trackpad input over either binary pane must update the shared vertical viewport, including when the pane overflows horizontally. The `.app` artifact is packaged into `dist/` for direct Finder launch.
 
 Vertical input is handled by Flutter's standard `ScrollPosition`, using the macOS-provided delta and direction unchanged. Each binary pane forwards only vertical pointer-scroll events past its nested horizontal viewport; Flutter handles trackpad drag physics and the scrollbar. The visible first row is derived from the standard pixel position.
 

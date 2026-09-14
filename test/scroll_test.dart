@@ -34,9 +34,9 @@ void main() {
       await tester.binding.setSurfaceSize(Size(width, 800));
       await tester.pumpWidget(MaterialApp(home: CompareWindow(controller: c)));
       await tester.pumpAndSettle();
-      // No extra title row; the sample action remains in the toolbar.
+      // No extra title row or sample action remains in the product UI.
       expect(find.text('Mushaaeshi Binary Editor'), findsNothing);
-      expect(find.text('Open Sample'), findsOneWidget);
+      expect(find.text('Open Sample'), findsNothing);
       void expectRow(int row) {
         expect(c.topRow, row);
         final panes = tester.widgetList<HexPane>(find.byType(HexPane));
