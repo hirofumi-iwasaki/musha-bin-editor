@@ -77,10 +77,15 @@ class CompareController extends ChangeNotifier {
       }
     } catch (e) {
       if (ticket == _openGeneration && !_disposed) {
-        error = e.toString();
+        error = 'Unable to open file: $e';
         _notify();
       }
     }
+  }
+
+  void reportError(String message) {
+    error = message;
+    _notify();
   }
 
   Future<void> demo() async {

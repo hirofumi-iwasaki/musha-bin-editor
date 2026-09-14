@@ -126,3 +126,11 @@
 - Added `tool/build_macos.sh` to create the standalone application at `dist/Mushaaeshi Binary Editor.app`.
 - Validation completed: Flutter static analysis reported no issues; all 12 tests passed; a fresh macOS Release build succeeded. Native UI inspection confirmed English labels, the 24-byte/four-range sample result, and synchronized scrolling from each pane.
 - Bundle verification completed: display name, bundle name and executable are `Mushaaeshi Binary Editor`; development region is English; the executable is arm64; strict deep code-signature verification passes with the expected local ad-hoc signature. Public distribution signing and notarization remain future release work.
+
+### 2026-09-14 Native scrolling and file drop follow-up
+
+- Replaced custom wheel/trackpad sign handling, fixed row-step accumulation and the hand-built scrollbar with Flutter's standard vertical `ScrollPosition` and `Scrollbar`. Raw macOS/Flutter vertical deltas are forwarded unchanged, preserving the user's natural-scrolling setting and standard sensitivity/physics while both panes share one position.
+- Added native macOS file-URL drag/drop. Exactly one regular file is accepted; the window half under the pointer maps to the left or right pane, security-scoped read access is retained, and the existing comparison pipeline reloads automatically.
+- Added English invalid-drop/read-failure messages and English accessibility labels identifying each pane as a left/right single-file drop target.
+- Confirmed that the existing read-only user-selected-file sandbox entitlement is sufficient; no dependency or additional entitlement was added.
+- Final validation: Flutter static analysis reported no issues; all 13 tests passed; the macOS Release package rebuilt successfully after native Swift compilation. Native UI inspection confirmed the English drop-target accessibility labels, the standard macOS scrollbar, and synchronized movement over both left and right panes. The packaged executable is arm64 and strict deep signature verification passes with the expected local ad-hoc signature and read-only user-selected-file sandbox entitlement.

@@ -2,8 +2,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 
 import '../core/comparison.dart';
 
@@ -48,7 +48,7 @@ class HexPane extends StatelessWidget {
     required this.invalid,
     required this.selected,
     required this.onSelect,
-    required this.onScroll,
+    required this.onVerticalPointerScroll,
     required this.focusNode,
   });
   final Uint8List bytes;
@@ -57,7 +57,7 @@ class HexPane extends StatelessWidget {
   final bool isLeft, hasFile, hasOther, loading, invalid;
   final int? selected;
   final ValueChanged<int> onSelect;
-  final ValueChanged<double> onScroll;
+  final ValueChanged<PointerScrollEvent> onVerticalPointerScroll;
   final FocusNode focusNode;
 
   @override
@@ -100,21 +100,16 @@ class HexPane extends StatelessWidget {
                   isLeft ? 'left-hex-surface' : 'right-hex-surface',
                 ),
                 behavior: HitTestBehavior.opaque,
-                // Claim vertical wheel input before the surrounding horizontal
-                // scrollable. The resolver prevents the parent from scrolling twice.
+                // Give vertical input to the shared Flutter ScrollPosition before
+                // this pane's horizontal Scrollable can claim mixed-axis events.
                 onPointerSignal: (event) {
                   if (event is PointerScrollEvent &&
                       event.scrollDelta.dy != 0) {
                     GestureBinding.instance.pointerSignalResolver.register(
                       event,
-                      (_) => onScroll(event.scrollDelta.dy),
+                      (_) => onVerticalPointerScroll(event),
                     );
                   }
-                },
-                // macOS trackpads also emit pan/zoom events rather than wheel
-                // signals. Pan is content movement, hence the inverse offset.
-                onPointerPanZoomUpdate: (event) {
-                  if (event.panDelta.dy != 0) onScroll(-event.panDelta.dy);
                 },
                 child: SizedBox(
                   width: math.max(bounds.maxWidth, layout.requiredWidth),

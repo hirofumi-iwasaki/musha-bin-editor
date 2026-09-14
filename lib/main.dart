@@ -51,13 +51,15 @@ class _CompareWindowState extends State<CompareWindow> {
   late final controller = widget.controller ?? CompareController();
   final leftFocus = FocusNode(debugLabel: 'Left hex');
   final rightFocus = FocusNode(debugLabel: 'Right hex');
+  final verticalScroll = ScrollController();
   static const platform = MethodChannel('mushaaeshi/files');
-  double wheelRemainder = 0;
   bool picking = false;
 
   @override
   void initState() {
     super.initState();
+    verticalScroll.addListener(_scrollChanged);
+    platform.setMethodCallHandler(_handlePlatformCall);
     if (const bool.fromEnvironment('BENCHMARK')) {
       unawaited(benchmark());
     } else if (const bool.fromEnvironment('DEMO')) {
@@ -94,10 +96,42 @@ class _CompareWindowState extends State<CompareWindow> {
 
   @override
   void dispose() {
+    platform.setMethodCallHandler(null);
+    verticalScroll
+      ..removeListener(_scrollChanged)
+      ..dispose();
     if (widget.controller == null) controller.dispose();
     leftFocus.dispose();
     rightFocus.dispose();
     super.dispose();
+  }
+
+  void _scrollChanged() {
+    if (!verticalScroll.hasClients) return;
+    controller.scrollTo((verticalScroll.offset / hexRowHeight).floor());
+  }
+
+  Future<void> _handlePlatformCall(MethodCall call) async {
+    if (!mounted) return;
+    if (call.method == 'fileDropped') {
+      final arguments = call.arguments;
+      if (arguments is! Map ||
+          arguments['path'] is! String ||
+          arguments['side'] is! String) {
+        controller.reportError('Unable to open the dropped file.');
+        return;
+      }
+      await controller.open(
+        arguments['path'] as String,
+        arguments['side'] == 'Left',
+      );
+    } else if (call.method == 'fileDropError') {
+      final arguments = call.arguments;
+      final message = arguments is Map ? arguments['message'] : null;
+      controller.reportError(
+        message is String ? message : 'Unable to open the dropped file.',
+      );
+    }
   }
 
   Future<void> open(bool left) async {
@@ -169,14 +203,19 @@ class _CompareWindowState extends State<CompareWindow> {
     if (result != null && mounted) controller.jump(result);
   }
 
-  void wheel(double delta) {
-    wheelRemainder += delta;
-    final rows = (wheelRemainder / hexRowHeight).truncate();
-    if (rows != 0) {
-      wheelRemainder -= rows * hexRowHeight;
-      final previous = controller.topRow;
-      controller.scrollTo(previous + rows);
-      if (controller.topRow == previous) wheelRemainder = 0;
+  void _pointerScroll(PointerScrollEvent event) {
+    if (!verticalScroll.hasClients) return;
+    verticalScroll.position.pointerScroll(event.scrollDelta.dy);
+  }
+
+  void _syncScrollPosition() {
+    if (!verticalScroll.hasClients) return;
+    final desired = controller.topRow * hexRowHeight;
+    final currentRow = (verticalScroll.offset / hexRowHeight).floor();
+    if (currentRow != controller.topRow) {
+      verticalScroll.jumpTo(
+        desired.clamp(0, verticalScroll.position.maxScrollExtent),
+      );
     }
   }
 
@@ -244,74 +283,80 @@ class _CompareWindowState extends State<CompareWindow> {
   Widget pane(bool left) {
     final file = left ? controller.left : controller.right;
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            height: 62,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  left ? Icons.file_present_outlined : Icons.compare_outlined,
-                  size: 21,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : file.path.split('/').last}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Tooltip(
-                        message: file?.path ?? '',
-                        child: Text(
-                          file == null
-                              ? 'Choose Open ${left ? 'Left' : 'Right'}'
-                              : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
+      child: Semantics(
+        container: true,
+        label:
+            '${left ? 'Left' : 'Right'} file drop target. Drop one binary file to open it on the ${left ? 'left' : 'right'}.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 62,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(context).dividerColor
+                        .withValues(alpha: 0.15),
                   ),
                 ),
-                const Text('Read-only', style: TextStyle(fontSize: 11)),
-              ],
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    left ? Icons.file_present_outlined : Icons.compare_outlined,
+                    size: 21,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : file.path.split('/').last}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Tooltip(
+                          message: file?.path ?? '',
+                          child: Text(
+                            file == null
+                                ? 'Choose Open ${left ? 'Left' : 'Right'}'
+                                : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Text('Read-only', style: TextStyle(fontSize: 11)),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: HexPane(
-              bytes: left ? controller.leftBytes : controller.rightBytes,
-              other: left ? controller.rightBytes : controller.leftBytes,
-              offset: controller.offset,
-              size: file?.stamp.size ?? 0,
-              totalSize: controller.length,
-              columns: controller.bytesPerRow,
-              isLeft: left,
-              hasFile: file != null,
-              hasOther: (left ? controller.right : controller.left) != null,
-              loading: controller.loading,
-              invalid: controller.invalid,
-              selected: controller.selectedLeft == left
-                  ? controller.selected
-                  : null,
-              onSelect: (at) => controller.select(at, left),
-              onScroll: wheel,
-              focusNode: left ? leftFocus : rightFocus,
+            Expanded(
+              child: HexPane(
+                bytes: left ? controller.leftBytes : controller.rightBytes,
+                other: left ? controller.rightBytes : controller.leftBytes,
+                offset: controller.offset,
+                size: file?.stamp.size ?? 0,
+                totalSize: controller.length,
+                columns: controller.bytesPerRow,
+                isLeft: left,
+                hasFile: file != null,
+                hasOther: (left ? controller.right : controller.left) != null,
+                loading: controller.loading,
+                invalid: controller.invalid,
+                selected: controller.selectedLeft == left
+                    ? controller.selected
+                    : null,
+                onSelect: (at) => controller.select(at, left),
+                onVerticalPointerScroll: _pointerScroll,
+                focusNode: left ? leftFocus : rightFocus,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -437,103 +482,36 @@ class _CompareWindowState extends State<CompareWindow> {
                           if (mounted) controller.setRows(rows);
                         });
                       }
-                      return Listener(
-                        onPointerSignal: (event) {
-                          if (event is PointerScrollEvent &&
-                              event.scrollDelta.dy != 0) {
-                            GestureBinding.instance.pointerSignalResolver
-                                .register(
-                                  event,
-                                  (_) => wheel(event.scrollDelta.dy),
-                                );
-                          }
-                        },
-                        child: Row(
-                          children: [
-                            pane(true),
-                            VerticalDivider(
-                              width: 1,
-                              thickness: 1,
-                              color: Theme.of(context).dividerColor
-                                  .withValues(alpha: 0.2),
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _syncScrollPosition();
+                      });
+                      return Scrollbar(
+                        controller: verticalScroll,
+                        thumbVisibility: true,
+                        child: CustomScrollView(
+                          controller: verticalScroll,
+                          slivers: [
+                            SliverPersistentHeader(
+                              pinned: true,
+                              delegate: _PinnedPaneDelegate(
+                                extent: bounds.maxHeight,
+                                child: Row(
+                                  children: [
+                                    pane(true),
+                                    VerticalDivider(
+                                      width: 1,
+                                      thickness: 1,
+                                      color: Theme.of(context).dividerColor
+                                          .withValues(alpha: 0.2),
+                                    ),
+                                    pane(false),
+                                  ],
+                                ),
+                              ),
                             ),
-                            pane(false),
-                            SizedBox(
-                              width: 18,
-                              child: LayoutBuilder(
-                                builder: (context, track) {
-                                  final height = track.maxHeight;
-                                  final thumb = math.max(
-                                    32.0,
-                                    height *
-                                        math.min(
-                                          1,
-                                          controller.visibleRows /
-                                              math.max(1, controller.rowCount),
-                                        ),
-                                  );
-                                  final travel = math.max(0.0, height - thumb);
-                                  void move(double y) {
-                                    if (travel > 0) {
-                                      controller.scrollTo(
-                                        (((y - thumb / 2) / travel).clamp(
-                                                  0.0,
-                                                  1.0,
-                                                ) *
-                                                controller.maxTop)
-                                            .round(),
-                                      );
-                                    }
-                                  }
-
-                                  return Semantics(
-                                    label: 'Synchronized scrolling',
-                                    value: 'Row ${controller.topRow + 1}',
-                                    increasedValue:
-                                        'Row ${(controller.topRow + controller.visibleRows).clamp(0, controller.maxTop) + 1}',
-                                    decreasedValue:
-                                        'Row ${(controller.topRow - controller.visibleRows).clamp(0, controller.maxTop) + 1}',
-                                    onIncrease: () => controller.scrollTo(
-                                      controller.topRow +
-                                          controller.visibleRows,
-                                    ),
-                                    onDecrease: () => controller.scrollTo(
-                                      controller.topRow -
-                                          controller.visibleRows,
-                                    ),
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTapDown: (d) =>
-                                          move(d.localPosition.dy),
-                                      onVerticalDragUpdate: (d) =>
-                                          move(d.localPosition.dy),
-                                      child: Stack(
-                                        children: [
-                                          Positioned(
-                                            top: controller.maxTop == 0
-                                                ? 0
-                                                : travel *
-                                                      controller.topRow /
-                                                      controller.maxTop,
-                                            left: 5,
-                                            right: 5,
-                                            height: math.min(height, thumb),
-                                            child: DecoratedBox(
-                                              decoration: BoxDecoration(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .outline
-                                                    .withValues(alpha: 0.45),
-                                                borderRadius:
-                                                    BorderRadius.circular(5),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
+                            SliverToBoxAdapter(
+                              child: SizedBox(
+                                height: controller.maxTop * hexRowHeight,
                               ),
                             ),
                           ],
@@ -597,4 +575,28 @@ class _CompareWindowState extends State<CompareWindow> {
       ),
     ),
   );
+}
+
+class _PinnedPaneDelegate extends SliverPersistentHeaderDelegate {
+  const _PinnedPaneDelegate({required this.extent, required this.child});
+
+  final double extent;
+  final Widget child;
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => child;
+
+  @override
+  bool shouldRebuild(covariant _PinnedPaneDelegate oldDelegate) =>
+      extent != oldDelegate.extent || child != oldDelegate.child;
 }

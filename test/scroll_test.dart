@@ -62,19 +62,28 @@ void main() {
         );
         await tester.pumpAndSettle();
         expectRow(2);
-        final trackpad = await tester.createGesture(
-          kind: PointerDeviceKind.trackpad,
+        // Flutter delivers macOS trackpad deltas after applying the user's
+        // system scroll-direction preference. The app forwards them unchanged
+        // to the standard ScrollPosition.
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            kind: PointerDeviceKind.trackpad,
+            position: point,
+            scrollDelta: const Offset(0, 75),
+          ),
         );
-        await trackpad.panZoomStart(point);
-        await trackpad.panZoomUpdate(point, pan: const Offset(0, -75));
-        await tester.pump();
-        expectRow(5);
-        await trackpad.panZoomUpdate(point, pan: const Offset(0, -25));
-        await tester.pump();
-        expectRow(3);
-        await trackpad.panZoomEnd();
         await tester.pumpAndSettle();
-        // Fractional wheel deltas accumulate into a row.
+        expectRow(5);
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            kind: PointerDeviceKind.trackpad,
+            position: point,
+            scrollDelta: const Offset(0, -50),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expectRow(3);
+        // Pixel deltas accumulate naturally in Flutter's ScrollPosition.
         for (var i = 0; i < 5; i++) {
           await tester.sendEventToBinding(
             PointerScrollEvent(

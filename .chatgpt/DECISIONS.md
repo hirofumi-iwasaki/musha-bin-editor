@@ -114,3 +114,5 @@ macOS限定で開始するという最新方針を優先する。以下は過去
 - Handle mouse-wheel and two-finger trackpad input directly over either binary pane and synchronize vertical scrolling.
 - Package a standalone macOS application at `dist/Mushaaeshi Binary Editor.app`; keep generated binaries outside Git.
 - Retain the existing bundle identifier for continuity of macOS app identity.
+- Route wheel and trackpad input through Flutter's standard vertical ScrollPosition without sign reversal or fixed sensitivity multipliers, so macOS natural-scrolling preferences are respected.
+- Accept one regular file dropped from Finder onto a binary pane; the pane under the pointer selects the left or right comparison side. Report invalid drops and read failures in English.

@@ -37,7 +37,8 @@ Select **Open Left** and **Open Right** to compare files, or **Open Sample** to 
 - Side-by-side offsets, hexadecimal bytes and ASCII characters
 - Red backgrounds on differing bytes; orange for bytes present on only one side
 - Missing bytes shown as `--`, distinct from a zero byte
-- Synchronized vertical scrolling using the mouse wheel, two-finger trackpad gestures or the right-hand scrollbar
+- Synchronized vertical scrolling using Flutter's standard macOS mouse-wheel, two-finger trackpad and scrollbar behavior, including the system natural-scrolling direction
+- Finder drag-and-drop: drop one file on the left or right binary pane to open it on that side
 - Horizontal scrolling when a pane is too narrow to show all columns
 - Eight or sixteen bytes per row
 - Previous/next difference range and hexadecimal offset navigation
@@ -97,7 +98,7 @@ dart run tool/benchmark.dart 1 100 1024
 flutter run -d macos --profile --dart-define=BENCHMARK=true
 ```
 
-Tests cover comparison boundaries, navigation, external modifications, stale display requests and wheel/trackpad scrolling over both binary panes. The scrolling tests also exercise narrow panes with horizontal overflow.
+Tests cover comparison boundaries, navigation, external modifications, stale display requests, native file-drop messages and wheel/trackpad scrolling over both binary panes. The scrolling tests also exercise narrow panes with horizontal overflow.
 
 The comparison benchmark creates temporary file pairs and removes them afterwards. The 1 GiB case needs approximately 2 GiB of free disk space. Files are compared immediately after creation, so the measurements are affected by the OS cache. The rendering benchmark scrolls the sample 180 times and logs median and 95th-percentile frame build/raster times.
 
@@ -115,7 +116,7 @@ Difference navigation currently scans from the start to the required range, whic
 
 External-change detection checks file size and timestamps during reads/comparisons; it does not guarantee a consistent snapshot of a file being modified concurrently. Reopen a file when a change is detected. Editing snapshots will be introduced with editing support.
 
-Accessibility labels describe the selected byte and provide scrolling actions. Full VoiceOver operation remains unverified. Range selection, copying, editing, undo/redo, saving and drag-and-drop are not implemented yet.
+Accessibility labels describe the selected byte and identify each file-drop target. Full VoiceOver operation remains unverified. Range selection, copying, editing, undo/redo and saving are not implemented yet.
 
 ## License
 
