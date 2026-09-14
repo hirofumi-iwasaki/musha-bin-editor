@@ -1,8 +1,12 @@
 # Mushagaeshi Binary Editor — Project Records
 
-Updated: 2026-09-14
+Updated: 2026-09-15
 
 This directory is the canonical record of design decisions, implementation plans and progress for the repository `hirofumi-iwasaki/musha-bin-editor`.
+
+## Current work
+
+Start with [v0.4.0 continuation plan](RELEASE_0.4.0_PLAN.md), then [Windows/Linux design](CROSS_PLATFORM_DESIGN.md). The working branch is `release/0.4.0`; implementation is pending.
 
 ## Documents
 
@@ -25,4 +29,4 @@ Earlier design documents retain their original Japanese text as historical recor
 - Do not store credentials, private keys or non-public device dumps here.
 - Recheck official platform and dependency support information when adopting or upgrading tools.
 
-The read-only comparison preview is implemented. Editing/saving and macOS 15 hardware validation remain outstanding. The active release-preparation branch is `release/0.1.0`.
+v0.3.0 includes comparison, editing/saving and hashes and has been merged into main. Current work is the Windows and Ubuntu port for v0.4.0. macOS 15 hardware validation remains outstanding.

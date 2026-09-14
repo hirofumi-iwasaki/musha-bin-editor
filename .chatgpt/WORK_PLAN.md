@@ -1,5 +1,15 @@
 # 作業計画と進捗
 
+## Current milestone: v0.4.0 (2026-09-15)
+
+- Working branch: `release/0.4.0`, created from merged main `0bd7646`.
+- Goal: Windows x64/Arm64 and Ubuntu-only x64/Arm64, preserving macOS.
+- Read [the continuation plan](RELEASE_0.4.0_PLAN.md) and [cross-platform design](CROSS_PLATFORM_DESIGN.md) before resuming.
+- Completed: design review, scope record, branch creation.
+- Validation: documentation consistency only; no platform implementation/build tests performed.
+- Next action: prove native toolchain/plugin feasibility and identify target test environments.
+- Earlier sections below are historical; the v0.4.0 plan defines current work.
+
 ## 0.3.0 hash display
 
 - Changed the empty-pane instruction to “Drag file here to open”.
