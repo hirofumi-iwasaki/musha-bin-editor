@@ -1,4 +1,4 @@
-# Mushaaeshi Binary Editor
+# Mushagaeshi Binary Editor
 
 A side-by-side hexadecimal binary viewer and comparison app for macOS.
 
