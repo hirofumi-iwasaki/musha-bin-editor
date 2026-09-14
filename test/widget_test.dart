@@ -17,8 +17,8 @@ void main() {
     expect(find.byTooltip('Save Right As'), findsOneWidget);
     expect(find.text('Drag file here to open'), findsNWidgets(2));
     expect(find.text('SHA-1'), findsOneWidget);
-    expect(find.text('Left: No file'), findsOneWidget);
-    expect(find.text('Right: No file'), findsOneWidget);
+    expect(find.text('Left: No file', findRichText: true), findsOneWidget);
+    expect(find.text('Right: No file', findRichText: true), findsOneWidget);
     await tester.tap(find.text('8 B/row'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

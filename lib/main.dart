@@ -578,8 +578,16 @@ class _CompareWindowState extends State<CompareWindow> {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Tooltip(
           message: value ?? display,
-          child: Text(
-            '${left ? 'Left' : 'Right'}: $display',
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '${left ? 'Left' : 'Right'}: '),
+                TextSpan(
+                  text: display,
+                  style: TextStyle(fontSize: value == null ? 11 : 13),
+                ),
+              ],
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontFamily: 'Menlo', fontSize: 11),
