@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushagaeshi_bin_diff/application/compare_controller.dart';
+import 'package:mushaaeshi_binary_editor/application/compare_controller.dart';
 
 Future<void> idle(CompareController c) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
@@ -49,9 +49,7 @@ void main() {
   );
 
   test('external changes invalidate results and clearing a scan does not publish stale results', () async {
-    final dir = await Directory.systemTemp.createTemp(
-      'mushagaeshi-controller-',
-    );
+    final dir = await Directory.systemTemp.createTemp('mushaaeshi-controller-');
     final c = CompareController();
     try {
       final a = File('${dir.path}/a');

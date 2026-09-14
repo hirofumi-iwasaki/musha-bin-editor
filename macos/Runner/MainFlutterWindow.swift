@@ -11,18 +11,19 @@ class MainFlutterWindow: NSWindow {
     contentViewController = controller
     setContentSize(NSSize(width: 1440, height: 860))
     minSize = NSSize(width: 980, height: 600)
-    title = "Mushagaeshi Bin Diff"
+    title = "Mushaaeshi Binary Editor"
     center()
     RegisterGeneratedPlugins(registry: controller)
-    channel = FlutterMethodChannel(name: "mushagaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
+    channel = FlutterMethodChannel(name: "mushaaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
     channel?.setMethodCallHandler { [weak self] call, result in
       guard call.method == "openFile", let self = self else {
         result(FlutterMethodNotImplemented)
         return
       }
-      let side = (call.arguments as? [String: String])?["side"] ?? "左"
+      let side = (call.arguments as? [String: String])?["side"] ?? "Left"
       let panel = NSOpenPanel()
-      panel.title = "\(side)のバイナリーファイルを開く"
+      panel.title = "Open \(side) Binary File"
+      panel.prompt = "Open"
       panel.canChooseDirectories = false
       panel.canChooseFiles = true
       panel.allowsMultipleSelection = false

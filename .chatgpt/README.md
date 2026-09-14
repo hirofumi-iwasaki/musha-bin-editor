@@ -1,28 +1,28 @@
-# MushagaeshiBinDiff 作業管理
+# Mushaaeshi Binary Editor — Project Records
 
-最終更新: 2026-09-14
+Updated: 2026-09-14
 
-このディレクトリーは、ChatGPT／Codexとの開発で使用する決定事項・作業方針・進捗の正本です。今後の作業開始時にここを読み、方針変更や作業完了時に関連文書を更新します。
+This directory is the canonical record of design decisions, implementation plans and progress for the repository `hirofumi-iwasaki/musha-bin-editor`.
 
-## 文書一覧
+## Documents
 
-- [表示・比較試作の検証記録](PROTOTYPE_REPORT.md): 実装範囲、実機確認、比較・描画性能、残課題。
+- [Decisions and requirements](DECISIONS.md): adopted requirements, platform support and open questions.
+- [Architecture](ARCHITECTURE.md): module boundaries, rendering and data handling.
+- [Detailed design](DESIGN.md): comparison, editing, saving and validation plans.
+- [Work plan](WORK_PLAN.md): milestones and dated work records.
+- [License policy](LICENSE_POLICY.md): GPL-3.0-or-later policy and distribution preparation.
+- [Prototype validation](PROTOTYPE_REPORT.md): initial functionality and measured performance.
 
-- [ライセンス方針](LICENSE_POLICY.md): GPLv3の採用理由、適用方針、公開前の整備事項。
+Earlier design documents retain their original Japanese text as historical records. The application, public README and new user-facing text use English. Localization is deferred.
 
-- [詳細設計](DESIGN.md): 採用した初期版の画面、比較・編集・保存仕様、内部構成、検証計画。暫定数値は評価で調整。
+## Record-keeping rules
 
-- [決定事項と要件](DECISIONS.md): プロジェクトの目的、採用技術、対応範囲、未確定事項。
-- [設計・開発方針](ARCHITECTURE.md): モジュール分離、描画・データ処理、将来拡張。
-- [作業計画と進捗](WORK_PLAN.md): 初期試作から公開までの段階、次の作業、作業記録。
+- Read these records before starting work and update relevant documents when decisions change.
+- Distinguish user-approved decisions from proposals and unresolved details.
+- Keep requirements, design and implementation plans consistent.
+- Never record unperformed implementation or tests as complete.
+- Record work performed, validation, remaining limitations and next steps in WORK_PLAN.md.
+- Do not store credentials, private keys or non-public device dumps here.
+- Recheck official platform and dependency support information when adopting or upgrading tools.
 
-## 運用ルール
-
-- ユーザーが合意した事項と、提案・未確定事項を区別する。
-- 方針変更時は決定事項と作業計画を同時に整合させ、変更理由を残す。
-- 実施していない実装・試験を完了と記録しない。
-- 作業終了時は実施内容、検証結果、残課題、次の作業をWORK_PLAN.mdに記録する。
-- 認証情報、秘密鍵、USB機器から取得した非公開データを記録しない。
-- OSや依存ソフトの対応情報は時間とともに変わるため、採用・更新時に公式情報を再確認する。
-
-現在はFlutterプロジェクトと表示・比較試作の実装、macOS 26での起動・操作確認まで完了。編集・保存、macOS 15実機検証、リリース配布は未実施。Git管理はhirofumi-iwasaki/musha-bin-editorの既存mainを使用し、2026-09-14に全ローカル資産を同名ディレクトリーへ移動。
+The read-only comparison preview is implemented. Editing/saving and macOS 15 hardware validation remain outstanding. The active release-preparation branch is `release/0.1.0`.

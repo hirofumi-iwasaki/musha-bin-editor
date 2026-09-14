@@ -5,11 +5,11 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:mushagaeshi_bin_diff/infrastructure/file_comparison.dart';
+import 'package:mushaaeshi_binary_editor/infrastructure/file_comparison.dart';
 
 Future<void> main(List<String> args) async {
   final results = <Map<String, Object?>>[];
-  final dir = await Directory.systemTemp.createTemp('mushagaeshi-bench-');
+  final dir = await Directory.systemTemp.createTemp('mushaaeshi-bench-');
   try {
     for (final mib in args.isEmpty ? [1, 100, 1024] : args.map(int.parse)) {
       final a = File('${dir.path}/a.bin');

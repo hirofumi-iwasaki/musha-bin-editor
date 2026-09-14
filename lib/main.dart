@@ -13,13 +13,15 @@ import 'package:flutter/services.dart';
 import 'application/compare_controller.dart';
 import 'presentation/hex_pane.dart';
 
-void main() => runApp(const MushagaeshiApp());
+void main() => runApp(const MushaaeshiBinaryEditorApp());
 
-class MushagaeshiApp extends StatelessWidget {
-  const MushagaeshiApp({super.key});
+class MushaaeshiBinaryEditorApp extends StatelessWidget {
+  const MushaaeshiBinaryEditorApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Mushagaeshi Bin Diff',
+    title: 'Mushaaeshi Binary Editor',
+    locale: const Locale('en'),
+    supportedLocales: const [Locale('en')],
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF315EA8)),
@@ -39,16 +41,17 @@ class MushagaeshiApp extends StatelessWidget {
 }
 
 class CompareWindow extends StatefulWidget {
-  const CompareWindow({super.key});
+  const CompareWindow({super.key, this.controller});
+  final CompareController? controller;
   @override
   State<CompareWindow> createState() => _CompareWindowState();
 }
 
 class _CompareWindowState extends State<CompareWindow> {
-  final controller = CompareController();
+  late final controller = widget.controller ?? CompareController();
   final leftFocus = FocusNode(debugLabel: 'Left hex');
   final rightFocus = FocusNode(debugLabel: 'Right hex');
-  static const platform = MethodChannel('mushagaeshi/files');
+  static const platform = MethodChannel('mushaaeshi/files');
   double wheelRemainder = 0;
   bool picking = false;
 
@@ -84,14 +87,14 @@ class _CompareWindowState extends State<CompareWindow> {
     }
 
     debugPrint(
-      'MUSHAGAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
+      'MUSHAAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
     );
     if (mounted) controller.jump(0);
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    if (widget.controller == null) controller.dispose();
     leftFocus.dispose();
     rightFocus.dispose();
     super.dispose();
@@ -102,13 +105,14 @@ class _CompareWindowState extends State<CompareWindow> {
     setState(() => picking = true);
     try {
       final path = await platform.invokeMethod<String>('openFile', {
-        'side': left ? '左' : '右',
+        'side': left ? 'Left' : 'Right',
       });
       if (path != null && mounted) await controller.open(path, left);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('ファイルを開けません: $error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Unable to open file: $error')));
       }
     } finally {
       if (mounted) setState(() => picking = false);
@@ -127,21 +131,23 @@ class _CompareWindowState extends State<CompareWindow> {
             if (text.startsWith('0x')) text = text.substring(2);
             final at = int.tryParse(text, radix: 16);
             if (at == null || at < 0 || at >= controller.length) {
-              update(() => error = 'ファイル範囲内の16進数を入力してください');
+              update(
+                () => error = 'Enter a hexadecimal offset within the file',
+              );
               return;
             }
             Navigator.pop(context, at);
           }
 
           return AlertDialog(
-            title: const Text('オフセットへ移動'),
+            title: const Text('Go to Offset'),
             content: SizedBox(
               width: 360,
               child: TextField(
                 controller: input,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: '16進数（例: 400 または 0x400）',
+                  labelText: 'Hex offset (e.g. 400 or 0x400)',
                   errorText: error,
                 ),
                 onSubmitted: (_) => submit(),
@@ -150,9 +156,9 @@ class _CompareWindowState extends State<CompareWindow> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('キャンセル'),
+                child: const Text('Cancel'),
               ),
-              FilledButton(onPressed: submit, child: const Text('移動')),
+              FilledButton(onPressed: submit, child: const Text('Go')),
             ],
           );
         },
@@ -168,7 +174,9 @@ class _CompareWindowState extends State<CompareWindow> {
     final rows = (wheelRemainder / hexRowHeight).truncate();
     if (rows != 0) {
       wheelRemainder -= rows * hexRowHeight;
-      controller.scrollTo(controller.topRow + rows);
+      final previous = controller.topRow;
+      controller.scrollTo(previous + rows);
+      if (controller.topRow == previous) wheelRemainder = 0;
     }
   }
 
@@ -261,7 +269,7 @@ class _CompareWindowState extends State<CompareWindow> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${left ? '左' : '右'} · ${file == null ? 'ファイル未選択' : file.path.split('/').last}',
+                        '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : file.path.split('/').last}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -270,15 +278,15 @@ class _CompareWindowState extends State<CompareWindow> {
                         message: file?.path ?? '',
                         child: Text(
                           file == null
-                              ? '「${left ? '左' : '右'}を開く」から選択'
-                              : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} バイト',
+                              ? 'Choose Open ${left ? 'Left' : 'Right'}'
+                              : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Text('閲覧専用', style: TextStyle(fontSize: 11)),
+                const Text('Read-only', style: TextStyle(fontSize: 11)),
               ],
             ),
           ),
@@ -332,36 +340,7 @@ class _CompareWindowState extends State<CompareWindow> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 15, 18, 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.view_column_outlined, size: 25),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'Mushagaeshi Bin Diff',
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Chip(
-                        label: const Text(
-                          '表示・比較の試作',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: picking ? null : controller.demo,
-                        child: const Text('サンプルを開く'),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -370,35 +349,35 @@ class _CompareWindowState extends State<CompareWindow> {
                       FilledButton.tonalIcon(
                         onPressed: picking ? null : () => open(true),
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('左を開く'),
+                        label: const Text('Open Left'),
                       ),
                       FilledButton.tonalIcon(
                         onPressed: picking ? null : () => open(false),
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('右を開く'),
+                        label: const Text('Open Right'),
                       ),
                       OutlinedButton.icon(
                         onPressed: controller.canCompare && !controller.busy
                             ? () => controller.compare(forward: false)
                             : null,
                         icon: const Icon(Icons.arrow_upward, size: 16),
-                        label: const Text('前の差分'),
+                        label: const Text('Previous Diff'),
                       ),
                       OutlinedButton.icon(
                         onPressed: controller.canCompare && !controller.busy
                             ? () => controller.compare(forward: true)
                             : null,
                         icon: const Icon(Icons.arrow_downward, size: 16),
-                        label: const Text('次の差分'),
+                        label: const Text('Next Diff'),
                       ),
                       TextButton(
                         onPressed: controller.length > 0 ? goTo : null,
-                        child: const Text('オフセットへ移動'),
+                        child: const Text('Go to Offset'),
                       ),
                       SegmentedButton<int>(
                         segments: const [
-                          ButtonSegment(value: 8, label: Text('8 B/行')),
-                          ButtonSegment(value: 16, label: Text('16 B/行')),
+                          ButtonSegment(value: 8, label: Text('8 B/row')),
+                          ButtonSegment(value: 16, label: Text('16 B/row')),
                         ],
                         selected: {controller.bytesPerRow},
                         onSelectionChanged: (v) => controller.setWidth(v.first),
@@ -408,12 +387,18 @@ class _CompareWindowState extends State<CompareWindow> {
                         ),
                       ),
                       TextButton(
+                        onPressed: picking ? null : controller.demo,
+                        child: const Text('Open Sample'),
+                      ),
+                      TextButton(
                         onPressed: controller.busy
                             ? controller.stop
                             : controller.canCompare
                             ? controller.compare
                             : null,
-                        child: Text(controller.busy ? '中断' : '再比較'),
+                        child: Text(
+                          controller.busy ? 'Cancel' : 'Compare Again',
+                        ),
                       ),
                     ],
                   ),
@@ -502,12 +487,12 @@ class _CompareWindowState extends State<CompareWindow> {
                                   }
 
                                   return Semantics(
-                                    label: '左右同期スクロール',
-                                    value: '${controller.topRow + 1}行目',
+                                    label: 'Synchronized scrolling',
+                                    value: 'Row ${controller.topRow + 1}',
                                     increasedValue:
-                                        '${(controller.topRow + controller.visibleRows).clamp(0, controller.maxTop) + 1}行目',
+                                        'Row ${(controller.topRow + controller.visibleRows).clamp(0, controller.maxTop) + 1}',
                                     decreasedValue:
-                                        '${(controller.topRow - controller.visibleRows).clamp(0, controller.maxTop) + 1}行目',
+                                        'Row ${(controller.topRow - controller.visibleRows).clamp(0, controller.maxTop) + 1}',
                                     onIncrease: () => controller.scrollTo(
                                       controller.topRow +
                                           controller.visibleRows,
@@ -575,19 +560,22 @@ class _CompareWindowState extends State<CompareWindow> {
                     spacing: 20,
                     runSpacing: 4,
                     children: [
-                      const Text('同一位置比較', style: TextStyle(fontSize: 12)),
+                      const Text(
+                        'Same-offset comparison',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       Text(
                         controller.status,
                         style: const TextStyle(fontSize: 12),
                       ),
                       if (controller.pair && !controller.invalid)
                         Text(
-                          '${controller.complete ? '差分' : '検出済み'} ${controller.diffBytes} バイト / ${controller.diffRuns} 区間',
+                          '${controller.complete ? 'Differences' : 'Found so far'} ${controller.diffBytes} bytes / ${controller.diffRuns} ranges',
                           style: const TextStyle(fontSize: 12),
                         ),
                       if (controller.selected != null)
                         Text(
-                          '${controller.selectedLeft ? '左' : '右'} 0x${controller.selected!.toRadixString(16).padLeft(8, '0').toUpperCase()}',
+                          '${controller.selectedLeft ? 'Left' : 'Right'} 0x${controller.selected!.toRadixString(16).padLeft(8, '0').toUpperCase()}',
                           style: const TextStyle(fontSize: 12),
                         ),
                       if (controller.complete)
@@ -596,7 +584,7 @@ class _CompareWindowState extends State<CompareWindow> {
                           style: const TextStyle(fontSize: 12),
                         ),
                       const Text(
-                        '赤: 不一致  ·  橙: 片側のみ',
+                        'Red: different  ·  Orange: one side only',
                         style: TextStyle(fontSize: 12),
                       ),
                     ],

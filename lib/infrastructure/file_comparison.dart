@@ -16,7 +16,7 @@ class FileStamp {
   static Future<FileStamp> read(String path) async {
     final stat = await File(path).stat();
     if (stat.type != FileSystemEntityType.file) {
-      throw FileSystemException('通常のファイルを選択してください', path);
+      throw FileSystemException('Please select a regular file', path);
     }
     return FileStamp(stat.size, stat.modified, stat.changed);
   }
@@ -40,7 +40,9 @@ Future<Uint8List> readExactRange(
   var read = 0;
   while (read < length) {
     final n = await file.readInto(result, read, length);
-    if (n == 0) throw const FileSystemException('読み込み中にファイルサイズが変わりました');
+    if (n == 0) {
+      throw const FileSystemException('File size changed while reading');
+    }
     read += n;
   }
   return result;
@@ -59,7 +61,9 @@ Future<void> compareWorker(Map<String, Object> request) async {
     final rs = await FileStamp.read(rp);
     if (!ls.matches(request['leftStamp'] as FileStamp) ||
         !rs.matches(request['rightStamp'] as FileStamp)) {
-      throw const FileSystemException('ファイルが外部で変更されました。開き直してください');
+      throw const FileSystemException(
+        'File changed outside the app. Please reopen it',
+      );
     }
     left = await File(lp).open();
     right = await File(rp).open();
@@ -99,7 +103,9 @@ Future<void> compareWorker(Map<String, Object> request) async {
     if (navigator != null && !navigator.done) navigator.finish(length);
     if (!ls.matches(await FileStamp.read(lp)) ||
         !rs.matches(await FileStamp.read(rp))) {
-      throw const FileSystemException('ファイルが外部で変更されました。開き直してください');
+      throw const FileSystemException(
+        'File changed outside the app. Please reopen it',
+      );
     }
     port.send({
       'type': 'done',
@@ -128,7 +134,9 @@ class PagedFile {
 
   Future<Uint8List> read(int offset, int count) async {
     if (!stamp.matches(await FileStamp.read(path))) {
-      throw const FileSystemException('ファイルが外部で変更されました。開き直してください');
+      throw const FileSystemException(
+        'File changed outside the app. Please reopen it',
+      );
     }
     if (offset >= stamp.size) return Uint8List(0);
     final end = math.min(stamp.size, offset + count);
@@ -155,7 +163,9 @@ class PagedFile {
       await file.close();
     }
     if (!stamp.matches(await FileStamp.read(path))) {
-      throw const FileSystemException('読み込み中にファイルが外部で変更されました');
+      throw const FileSystemException(
+        'File changed outside the app while reading',
+      );
     }
     _cachedStart = start;
     _cached = data;
