@@ -70,6 +70,10 @@ Future<void> compareWorker(Map<String, Object> request) async {
     final length = math.max(ls.size, rs.size);
     final accumulator = DiffAccumulator();
     final cursor = request['cursor'] as int?;
+    final leftEdits =
+        (request['leftEdits'] as Map?)?.cast<int, int>() ?? const <int, int>{};
+    final rightEdits =
+        (request['rightEdits'] as Map?)?.cast<int, int>() ?? const <int, int>{};
     final navigator = cursor == null
         ? null
         : RunNavigator(cursor, request['forward'] as bool);
@@ -78,6 +82,16 @@ Future<void> compareWorker(Map<String, Object> request) async {
     for (var offset = 0; offset < length; offset += scanBlockSize) {
       final a = await readExactRange(left, ls.size, offset, scanBlockSize);
       final b = await readExactRange(right, rs.size, offset, scanBlockSize);
+      for (final entry in leftEdits.entries) {
+        if (entry.key >= offset && entry.key < offset + a.length) {
+          a[entry.key - offset] = entry.value;
+        }
+      }
+      for (final entry in rightEdits.entries) {
+        if (entry.key >= offset && entry.key < offset + b.length) {
+          b[entry.key - offset] = entry.value;
+        }
+      }
       if (navigator == null) {
         accumulator.add(a, b, offset);
       } else {

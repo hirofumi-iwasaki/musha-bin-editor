@@ -116,3 +116,12 @@ macOS限定で開始するという最新方針を優先する。以下は過去
 - Retain the existing bundle identifier for continuity of macOS app identity.
 - Route wheel and trackpad input through Flutter's standard vertical ScrollPosition without sign reversal or fixed sensitivity multipliers, so macOS natural-scrolling preferences are respected.
 - Accept one regular file dropped from Finder onto a binary pane; the pane under the pointer selects the left or right comparison side. Report invalid drops and read failures in English.
+
+## Editing and saving decisions — 0.2.0
+
+- Editing is independently enabled per pane and remains fixed-size hexadecimal byte overwrite only.
+- Two hexadecimal digits commit one byte; the first digit is a pending preview and Escape or selection movement cancels it.
+- Modified offsets remain in a bounded sparse overlay, are underlined in the viewport, mark the pane dirty and participate in comparison immediately.
+- Save and Save As stream the base file plus edited-byte overlay to a same-directory temporary file before replacement. A changed source requires explicit overwrite confirmation; failures retain edits.
+- A file already open in the opposite pane is rejected to prevent conflicting writes. Opening/dropping a replacement and closing the window use Save / Discard / Cancel protection.
+- The macOS sandbox entitlement is limited to user-selected read/write files; no broad filesystem entitlement is added.

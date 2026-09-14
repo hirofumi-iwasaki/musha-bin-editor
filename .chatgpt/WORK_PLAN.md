@@ -149,3 +149,11 @@
 - Removed the `DEMO` launch path. The generated file-pair fixture remains as `loadBenchmarkFixture` because controller regression tests and the opt-in rendering benchmark require deterministic data; it is not reachable from normal product UI.
 - Updated widget and scrolling tests to assert that Open Sample is absent while Open Left, Open Right, synchronized scrolling and Finder drop targets remain available.
 - Final validation completed: static analysis reported no issues; all 13 tests passed; a clean macOS Release build and package succeeded after regenerating nested signatures. The packaged executable is arm64 and strict deep code-signature verification passes.
+
+### 2026-09-14 Version 0.2.0 editing and saving
+
+- Added independent Edit ON/OFF state, two-digit HEX byte overwrite, pending-nibble cancellation, edited-byte underlines and per-pane dirty indicators.
+- Applied sparse edits to viewport reads and background comparison so difference colors/counts update from in-memory content.
+- Added Save and Save As with native macOS save panels, streamed same-directory temporary output, flush-before-replace, external-change confirmation and English failure messages.
+- Added Save / Discard / Cancel protection for replacing dirty panes and closing the window. Rejects opening or saving over the file in the opposite pane.
+- Updated both macOS sandbox configurations from user-selected read-only to narrowly scoped user-selected read/write; no broader filesystem entitlement was added.

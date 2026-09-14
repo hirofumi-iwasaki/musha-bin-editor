@@ -1,7 +1,7 @@
 name: mushaaeshi_binary_editor
 description: Mushaaeshi Binary Editor, a macOS hexadecimal comparison app.
 publish_to: none
-version: 0.1.0+1
+version: 0.2.0+2
 environment:
   sdk: '>=3.13.3 <4.0.0'
 dependencies:

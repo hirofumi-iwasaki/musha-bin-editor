@@ -75,9 +75,10 @@ private final class FileDropHostView: NSView {
   deinit { for url in accessURLs.values { url.stopAccessingSecurityScopedResource() } }
 }
 
-class MainFlutterWindow: NSWindow {
+class MainFlutterWindow: NSWindow, NSWindowDelegate {
   private var channel: FlutterMethodChannel?
   private var accessURLs: [String: URL] = [:]
+  private var allowClose = false
 
   override func awakeFromNib() {
     let controller = FlutterViewController()
@@ -92,12 +93,37 @@ class MainFlutterWindow: NSWindow {
     setContentSize(NSSize(width: 1440, height: 860))
     minSize = NSSize(width: 980, height: 600)
     title = "Mushaaeshi Binary Editor"
+    delegate = self
     center()
     RegisterGeneratedPlugins(registry: controller)
     channel = FlutterMethodChannel(name: "mushaaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
     host.channel = channel
     channel?.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "openFile", let self = self else {
+      guard let self = self else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      if call.method == "confirmClose" {
+        self.allowClose = true
+        self.performClose(nil)
+        result(nil)
+        return
+      }
+      if call.method == "saveFile" {
+        let arguments = call.arguments as? [String: String]
+        let side = arguments?["side"] ?? "File"
+        let panel = NSSavePanel()
+        panel.title = "Save \(side) Binary File As"
+        panel.prompt = "Save"
+        panel.nameFieldStringValue = arguments?["name"] ?? "binary.bin"
+        panel.beginSheetModal(for: self) { response in
+          guard response == .OK, let url = panel.url else { result(nil); return }
+          if url.startAccessingSecurityScopedResource() { self.accessURLs[url.path] = url }
+          result(url.path)
+        }
+        return
+      }
+      guard call.method == "openFile" else {
         result(FlutterMethodNotImplemented)
         return
       }
@@ -110,9 +136,7 @@ class MainFlutterWindow: NSWindow {
       panel.allowsMultipleSelection = false
       panel.beginSheetModal(for: self) { response in
         guard response == .OK, let url = panel.url else { result(nil); return }
-        self.accessURLs[side]?.stopAccessingSecurityScopedResource()
-        if url.startAccessingSecurityScopedResource() { self.accessURLs[side] = url }
-        else { self.accessURLs.removeValue(forKey: side) }
+        if url.startAccessingSecurityScopedResource() { self.accessURLs[url.path] = url }
         result(url.path)
       }
     }
@@ -120,4 +144,10 @@ class MainFlutterWindow: NSWindow {
   }
 
   deinit { for url in accessURLs.values { url.stopAccessingSecurityScopedResource() } }
+
+  func windowShouldClose(_ sender: NSWindow) -> Bool {
+    if allowClose { return true }
+    channel?.invokeMethod("requestClose", arguments: nil)
+    return false
+  }
 }

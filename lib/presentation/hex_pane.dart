@@ -47,6 +47,8 @@ class HexPane extends StatelessWidget {
     required this.loading,
     required this.invalid,
     required this.selected,
+    required this.edited,
+    required this.editing,
     required this.onSelect,
     required this.onVerticalPointerScroll,
     required this.focusNode,
@@ -56,6 +58,8 @@ class HexPane extends StatelessWidget {
   final int offset, size, totalSize, columns;
   final bool isLeft, hasFile, hasOther, loading, invalid;
   final int? selected;
+  final Set<int> edited;
+  final bool editing;
   final ValueChanged<int> onSelect;
   final ValueChanged<PointerScrollEvent> onVerticalPointerScroll;
   final FocusNode focusNode;
@@ -86,7 +90,7 @@ class HexPane extends StatelessWidget {
     }
     return Semantics(
       label:
-          '${isLeft ? 'Left' : 'Right'} hexadecimal view. Read-only. $selectedLabel',
+          '${isLeft ? 'Left' : 'Right'} hexadecimal view. ${editing ? 'Editing enabled.' : 'Editing disabled.'} $selectedLabel',
       focusable: true,
       child: Focus(
         focusNode: focusNode,
@@ -142,6 +146,7 @@ class HexPane extends StatelessWidget {
                           loading: loading,
                           invalid: invalid,
                           selected: selected,
+                          edited: edited,
                           dark: Theme.of(context).brightness == Brightness.dark,
                         ),
                         child: !hasFile
@@ -180,6 +185,7 @@ class HexPainter extends CustomPainter {
     required this.loading,
     required this.invalid,
     required this.selected,
+    required this.edited,
     required this.dark,
   });
   final Uint8List bytes, other;
@@ -187,6 +193,7 @@ class HexPainter extends CustomPainter {
   final HexLayout layout;
   final bool isLeft, hasFile, hasOther, loading, invalid, dark;
   final int? selected;
+  final Set<int> edited;
 
   @override
   void paint(Canvas canvas, Size canvasSize) {
@@ -282,6 +289,15 @@ class HexPainter extends CustomPainter {
               ? String.fromCharCode(value)
               : '.';
           draw(ascii, layout.asciiStart + col * 8, y + 4, foreground);
+          if (edited.contains(at) && value != null) {
+            canvas.drawLine(
+              Offset(x, y + 22),
+              Offset(x + 18, y + 22),
+              Paint()
+                ..color = const Color(0xFF4D8DEF)
+                ..strokeWidth = 2,
+            );
+          }
           if (selected == at && value != null && !loading) {
             canvas.drawRRect(
               RRect.fromRectAndRadius(
@@ -308,6 +324,7 @@ class HexPainter extends CustomPainter {
       old.layout.columns != layout.columns ||
       old.layout.digits != layout.digits ||
       old.selected != selected ||
+      old.edited != edited ||
       old.dark != dark ||
       old.loading != loading ||
       old.invalid != invalid ||

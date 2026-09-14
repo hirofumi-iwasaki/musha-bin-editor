@@ -12,6 +12,9 @@ void main() {
     expect(find.text('Open Left'), findsOneWidget);
     expect(find.text('Open Right'), findsOneWidget);
     expect(find.text('Open Sample'), findsNothing);
+    expect(find.text('Edit OFF'), findsNWidgets(2));
+    expect(find.byTooltip('Save Left As'), findsOneWidget);
+    expect(find.byTooltip('Save Right As'), findsOneWidget);
     expect(find.text('Open a file to begin'), findsNWidgets(2));
     await tester.tap(find.text('8 B/row'));
     await tester.pumpAndSettle();

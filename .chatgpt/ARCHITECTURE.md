@@ -48,3 +48,7 @@ minipro等の利用時は採用バージョンのライセンス・再配布条�
 ## 表示試作の実装状況（2026-09-14）
 
 表示試作では64KiBの範囲読込キャッシュと、操作単位の比較Isolateを実装。1MiB単位のストリーム比較と上限2048件の文字描画キャッシュを採用した。編集状態を所有する長寿命Isolate、差分ブロック索引、編集用スナップショットは後続とする。機能と測定結果はPROTOTYPE_REPORT.mdを参照。
+
+## 0.2.0 editing and saving
+
+Each pane owns an independent sparse offset-to-byte edit overlay. Viewport reads apply the overlay after paged disk reads, and comparison workers receive immutable copies so edited differences are reflected without writing the source. Saving streams 1 MiB blocks through the overlay to a temporary sibling file, flushes it, rechecks the source stamp and then replaces the chosen destination. AppKit owns Open/Save panels and security-scoped URLs; Dart owns validation and file transformation. The sandbox grants read/write only for user-selected files.
