@@ -2,6 +2,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../core/comparison.dart';
@@ -47,7 +48,7 @@ class HexPane extends StatelessWidget {
     required this.invalid,
     required this.selected,
     required this.onSelect,
-    required this.onScroll,
+    required this.onVerticalPointerScroll,
     required this.focusNode,
   });
   final Uint8List bytes;
@@ -56,7 +57,7 @@ class HexPane extends StatelessWidget {
   final bool isLeft, hasFile, hasOther, loading, invalid;
   final int? selected;
   final ValueChanged<int> onSelect;
-  final ValueChanged<double> onScroll;
+  final ValueChanged<PointerScrollEvent> onVerticalPointerScroll;
   final FocusNode focusNode;
 
   @override
@@ -77,24 +78,39 @@ class HexPane extends StatelessWidget {
             )
           : null;
       selectedLabel =
-          ' オフセット ${selected!.toRadixString(16)}, 値 ${bytes[i].toRadixString(16).padLeft(2, '0')}, ${d == null
-              ? '未比較'
+          ' Offset ${selected!.toRadixString(16)}, value ${bytes[i].toRadixString(16).padLeft(2, '0')}, ${d == null
+              ? 'Not compared'
               : d == ByteDifference.equal
-              ? '一致'
-              : '差分あり'}';
+              ? 'Equal'
+              : 'Different'}';
     }
     return Semantics(
-      label: '${isLeft ? '左' : '右'}の16進数表示。閲覧専用。$selectedLabel',
+      label:
+          '${isLeft ? 'Left' : 'Right'} hexadecimal view. Read-only. $selectedLabel',
       focusable: true,
       child: Focus(
         focusNode: focusNode,
-        child: Listener(
-          onPointerSignal: (event) {},
-          child: LayoutBuilder(
-            builder: (context, bounds) {
-              final layout = HexLayout(columns, digits, bounds.maxWidth);
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+        child: LayoutBuilder(
+          builder: (context, bounds) {
+            final layout = HexLayout(columns, digits, bounds.maxWidth);
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Listener(
+                key: ValueKey(
+                  isLeft ? 'left-hex-surface' : 'right-hex-surface',
+                ),
+                behavior: HitTestBehavior.opaque,
+                // Give vertical input to the shared Flutter ScrollPosition before
+                // this pane's horizontal Scrollable can claim mixed-axis events.
+                onPointerSignal: (event) {
+                  if (event is PointerScrollEvent &&
+                      event.scrollDelta.dy != 0) {
+                    GestureBinding.instance.pointerSignalResolver.register(
+                      event,
+                      (_) => onVerticalPointerScroll(event),
+                    );
+                  }
+                },
                 child: SizedBox(
                   width: math.max(bounds.maxWidth, layout.requiredWidth),
                   height: bounds.maxHeight,
@@ -129,19 +145,21 @@ class HexPane extends StatelessWidget {
                           dark: Theme.of(context).brightness == Brightness.dark,
                         ),
                         child: !hasFile
-                            ? const Center(child: Text('ファイルを開いてください'))
+                            ? const Center(child: Text('Open a file to begin'))
                             : invalid
-                            ? const Center(child: Text('読込エラー · 開き直してください'))
+                            ? const Center(
+                                child: Text('Read error · Reopen the file'),
+                              )
                             : size == 0 && !hasOther
-                            ? const Center(child: Text('空のファイルです'))
+                            ? const Center(child: Text('This file is empty'))
                             : null,
                       ),
                     ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -308,12 +326,12 @@ class _GlyphCache {
     final key = (text, color, size);
     var painter = _entries.remove(key);
     painter ??= TextPainter(
-        textDirection: TextDirection.ltr,
-        text: TextSpan(
-          text: text,
-          style: TextStyle(fontFamily: 'Menlo', fontSize: size, color: color),
-        ),
-      )..layout();
+      textDirection: TextDirection.ltr,
+      text: TextSpan(
+        text: text,
+        style: TextStyle(fontFamily: 'Menlo', fontSize: size, color: color),
+      ),
+    )..layout();
     _entries[key] = painter;
     if (_entries.length > 2048) {
       _entries.remove(_entries.keys.first)!.dispose();

@@ -13,13 +13,15 @@ import 'package:flutter/services.dart';
 import 'application/compare_controller.dart';
 import 'presentation/hex_pane.dart';
 
-void main() => runApp(const MushagaeshiApp());
+void main() => runApp(const MushaaeshiBinaryEditorApp());
 
-class MushagaeshiApp extends StatelessWidget {
-  const MushagaeshiApp({super.key});
+class MushaaeshiBinaryEditorApp extends StatelessWidget {
+  const MushaaeshiBinaryEditorApp({super.key});
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Mushagaeshi Bin Diff',
+    title: 'Mushaaeshi Binary Editor',
+    locale: const Locale('en'),
+    supportedLocales: const [Locale('en')],
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF315EA8)),
@@ -39,31 +41,35 @@ class MushagaeshiApp extends StatelessWidget {
 }
 
 class CompareWindow extends StatefulWidget {
-  const CompareWindow({super.key});
+  const CompareWindow({super.key, this.controller});
+  final CompareController? controller;
   @override
   State<CompareWindow> createState() => _CompareWindowState();
 }
 
 class _CompareWindowState extends State<CompareWindow> {
-  final controller = CompareController();
+  late final controller = widget.controller ?? CompareController();
   final leftFocus = FocusNode(debugLabel: 'Left hex');
   final rightFocus = FocusNode(debugLabel: 'Right hex');
-  static const platform = MethodChannel('mushagaeshi/files');
-  double wheelRemainder = 0;
+  final leftPaneKey = GlobalKey();
+  final rightPaneKey = GlobalKey();
+  final verticalScroll = ScrollController();
+  static const platform = MethodChannel('mushaaeshi/files');
   bool picking = false;
+  bool? hoveredDropLeft;
 
   @override
   void initState() {
     super.initState();
+    verticalScroll.addListener(_scrollChanged);
+    platform.setMethodCallHandler(_handlePlatformCall);
     if (const bool.fromEnvironment('BENCHMARK')) {
       unawaited(benchmark());
-    } else if (const bool.fromEnvironment('DEMO')) {
-      unawaited(controller.demo());
     }
   }
 
   Future<void> benchmark() async {
-    await controller.demo();
+    await controller.loadBenchmarkFixture();
     while (mounted && controller.busy) {
       await Future<void>.delayed(const Duration(milliseconds: 30));
     }
@@ -84,17 +90,84 @@ class _CompareWindowState extends State<CompareWindow> {
     }
 
     debugPrint(
-      'MUSHAGAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
+      'MUSHAAESHI_FRAME_BENCHMARK ${jsonEncode({'frames': frames.length, 'buildP50Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.5), 'buildP95Ms': percentile(frames.map((f) => f.buildDuration.inMicroseconds).toList(), 0.95), 'rasterP50Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.5), 'rasterP95Ms': percentile(frames.map((f) => f.rasterDuration.inMicroseconds).toList(), 0.95)})}',
     );
     if (mounted) controller.jump(0);
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    platform.setMethodCallHandler(null);
+    verticalScroll
+      ..removeListener(_scrollChanged)
+      ..dispose();
+    if (widget.controller == null) controller.dispose();
     leftFocus.dispose();
     rightFocus.dispose();
     super.dispose();
+  }
+
+  void _scrollChanged() {
+    if (!verticalScroll.hasClients) return;
+    controller.scrollTo((verticalScroll.offset / hexRowHeight).floor());
+  }
+
+  Future<void> _handlePlatformCall(MethodCall call) async {
+    if (!mounted) return;
+    if (call.method == 'fileDropped') {
+      final arguments = call.arguments;
+      if (arguments is! Map ||
+          arguments['path'] is! String ||
+          arguments['x'] is! num ||
+          arguments['y'] is! num) {
+        controller.reportError('Unable to open the dropped file.');
+        return;
+      }
+      final side = _dropSideAt(
+        Offset(
+          (arguments['x'] as num).toDouble(),
+          (arguments['y'] as num).toDouble(),
+        ),
+      );
+      if (side == null) {
+        controller.reportError(
+          'Drop the file on the left or right binary pane.',
+        );
+      } else {
+        await controller.open(arguments['path'] as String, side);
+      }
+      if (mounted) setState(() => hoveredDropLeft = null);
+    } else if (call.method == 'fileDragUpdated') {
+      final arguments = call.arguments;
+      if (arguments is Map && arguments['x'] is num && arguments['y'] is num) {
+        final side = _dropSideAt(
+          Offset(
+            (arguments['x'] as num).toDouble(),
+            (arguments['y'] as num).toDouble(),
+          ),
+        );
+        if (side != hoveredDropLeft) setState(() => hoveredDropLeft = side);
+      }
+    } else if (call.method == 'fileDragExited') {
+      if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
+    } else if (call.method == 'fileDropError') {
+      final arguments = call.arguments;
+      final message = arguments is Map ? arguments['message'] : null;
+      controller.reportError(
+        message is String ? message : 'Unable to open the dropped file.',
+      );
+      if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
+    }
+  }
+
+  bool? _dropSideAt(Offset point) {
+    for (final entry in [(leftPaneKey, true), (rightPaneKey, false)]) {
+      final box = entry.$1.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) continue;
+      final local = box.globalToLocal(point);
+      if ((Offset.zero & box.size).contains(local)) return entry.$2;
+    }
+    return null;
   }
 
   Future<void> open(bool left) async {
@@ -102,13 +175,14 @@ class _CompareWindowState extends State<CompareWindow> {
     setState(() => picking = true);
     try {
       final path = await platform.invokeMethod<String>('openFile', {
-        'side': left ? '左' : '右',
+        'side': left ? 'Left' : 'Right',
       });
       if (path != null && mounted) await controller.open(path, left);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('ファイルを開けません: $error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Unable to open file: $error')));
       }
     } finally {
       if (mounted) setState(() => picking = false);
@@ -127,21 +201,23 @@ class _CompareWindowState extends State<CompareWindow> {
             if (text.startsWith('0x')) text = text.substring(2);
             final at = int.tryParse(text, radix: 16);
             if (at == null || at < 0 || at >= controller.length) {
-              update(() => error = 'ファイル範囲内の16進数を入力してください');
+              update(
+                () => error = 'Enter a hexadecimal offset within the file',
+              );
               return;
             }
             Navigator.pop(context, at);
           }
 
           return AlertDialog(
-            title: const Text('オフセットへ移動'),
+            title: const Text('Go to Offset'),
             content: SizedBox(
               width: 360,
               child: TextField(
                 controller: input,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: '16進数（例: 400 または 0x400）',
+                  labelText: 'Hex offset (e.g. 400 or 0x400)',
                   errorText: error,
                 ),
                 onSubmitted: (_) => submit(),
@@ -150,9 +226,9 @@ class _CompareWindowState extends State<CompareWindow> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('キャンセル'),
+                child: const Text('Cancel'),
               ),
-              FilledButton(onPressed: submit, child: const Text('移動')),
+              FilledButton(onPressed: submit, child: const Text('Go')),
             ],
           );
         },
@@ -163,12 +239,19 @@ class _CompareWindowState extends State<CompareWindow> {
     if (result != null && mounted) controller.jump(result);
   }
 
-  void wheel(double delta) {
-    wheelRemainder += delta;
-    final rows = (wheelRemainder / hexRowHeight).truncate();
-    if (rows != 0) {
-      wheelRemainder -= rows * hexRowHeight;
-      controller.scrollTo(controller.topRow + rows);
+  void _pointerScroll(PointerScrollEvent event) {
+    if (!verticalScroll.hasClients) return;
+    verticalScroll.position.pointerScroll(event.scrollDelta.dy);
+  }
+
+  void _syncScrollPosition() {
+    if (!verticalScroll.hasClients) return;
+    final desired = controller.topRow * hexRowHeight;
+    final currentRow = (verticalScroll.offset / hexRowHeight).floor();
+    if (currentRow != controller.topRow) {
+      verticalScroll.jumpTo(
+        desired.clamp(0, verticalScroll.position.maxScrollExtent),
+      );
     }
   }
 
@@ -236,74 +319,101 @@ class _CompareWindowState extends State<CompareWindow> {
   Widget pane(bool left) {
     final file = left ? controller.left : controller.right;
     return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            height: 62,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
+      child: AnimatedContainer(
+        key: left ? leftPaneKey : rightPaneKey,
+        duration: const Duration(milliseconds: 100),
+        decoration: BoxDecoration(
+          color: hoveredDropLeft == left
+              ? Theme.of(context).colorScheme.primaryContainer
+                    .withValues(alpha: 0.32)
+              : null,
+          border: hoveredDropLeft == left
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 3,
+                )
+              : null,
+        ),
+        child: Semantics(
+          container: true,
+          label:
+              '${left ? 'Left' : 'Right'} file drop target. Drop one binary file to open it on the ${left ? 'left' : 'right'}.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 62,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  left ? Icons.file_present_outlined : Icons.compare_outlined,
-                  size: 21,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${left ? '左' : '右'} · ${file == null ? 'ファイル未選択' : file.path.split('/').last}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      Tooltip(
-                        message: file?.path ?? '',
-                        child: Text(
-                          file == null
-                              ? '「${left ? '左' : '右'}を開く」から選択'
-                              : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} バイト',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).dividerColor
+                          .withValues(alpha: 0.15),
+                    ),
                   ),
                 ),
-                const Text('閲覧専用', style: TextStyle(fontSize: 11)),
-              ],
-            ),
+                child: Row(
+                  children: [
+                    Icon(
+                      left
+                          ? Icons.file_present_outlined
+                          : Icons.compare_outlined,
+                      size: 21,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : file.path.split('/').last}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Tooltip(
+                            message: file?.path ?? '',
+                            child: Text(
+                              file == null
+                                  ? 'Choose Open ${left ? 'Left' : 'Right'}'
+                                  : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Text('Read-only', style: TextStyle(fontSize: 11)),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: HexPane(
+                  bytes: left ? controller.leftBytes : controller.rightBytes,
+                  other: left ? controller.rightBytes : controller.leftBytes,
+                  offset: controller.offset,
+                  size: file?.stamp.size ?? 0,
+                  totalSize: controller.length,
+                  columns: controller.bytesPerRow,
+                  isLeft: left,
+                  hasFile: file != null,
+                  hasOther: (left ? controller.right : controller.left) != null,
+                  loading: controller.loading,
+                  invalid: controller.invalid,
+                  selected: controller.selectedLeft == left
+                      ? controller.selected
+                      : null,
+                  onSelect: (at) => controller.select(at, left),
+                  onVerticalPointerScroll: _pointerScroll,
+                  focusNode: left ? leftFocus : rightFocus,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: HexPane(
-              bytes: left ? controller.leftBytes : controller.rightBytes,
-              other: left ? controller.rightBytes : controller.leftBytes,
-              offset: controller.offset,
-              size: file?.stamp.size ?? 0,
-              totalSize: controller.length,
-              columns: controller.bytesPerRow,
-              isLeft: left,
-              hasFile: file != null,
-              hasOther: (left ? controller.right : controller.left) != null,
-              loading: controller.loading,
-              invalid: controller.invalid,
-              selected: controller.selectedLeft == left
-                  ? controller.selected
-                  : null,
-              onSelect: (at) => controller.select(at, left),
-              onScroll: wheel,
-              focusNode: left ? leftFocus : rightFocus,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -332,36 +442,7 @@ class _CompareWindowState extends State<CompareWindow> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 15, 18, 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.view_column_outlined, size: 25),
-                      const SizedBox(width: 10),
-                      const Text(
-                        'Mushagaeshi Bin Diff',
-                        style: TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Chip(
-                        label: const Text(
-                          '表示・比較の試作',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: picking ? null : controller.demo,
-                        child: const Text('サンプルを開く'),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -370,35 +451,35 @@ class _CompareWindowState extends State<CompareWindow> {
                       FilledButton.tonalIcon(
                         onPressed: picking ? null : () => open(true),
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('左を開く'),
+                        label: const Text('Open Left'),
                       ),
                       FilledButton.tonalIcon(
                         onPressed: picking ? null : () => open(false),
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('右を開く'),
+                        label: const Text('Open Right'),
                       ),
                       OutlinedButton.icon(
                         onPressed: controller.canCompare && !controller.busy
                             ? () => controller.compare(forward: false)
                             : null,
                         icon: const Icon(Icons.arrow_upward, size: 16),
-                        label: const Text('前の差分'),
+                        label: const Text('Previous Diff'),
                       ),
                       OutlinedButton.icon(
                         onPressed: controller.canCompare && !controller.busy
                             ? () => controller.compare(forward: true)
                             : null,
                         icon: const Icon(Icons.arrow_downward, size: 16),
-                        label: const Text('次の差分'),
+                        label: const Text('Next Diff'),
                       ),
                       TextButton(
                         onPressed: controller.length > 0 ? goTo : null,
-                        child: const Text('オフセットへ移動'),
+                        child: const Text('Go to Offset'),
                       ),
                       SegmentedButton<int>(
                         segments: const [
-                          ButtonSegment(value: 8, label: Text('8 B/行')),
-                          ButtonSegment(value: 16, label: Text('16 B/行')),
+                          ButtonSegment(value: 8, label: Text('8 B/row')),
+                          ButtonSegment(value: 16, label: Text('16 B/row')),
                         ],
                         selected: {controller.bytesPerRow},
                         onSelectionChanged: (v) => controller.setWidth(v.first),
@@ -413,7 +494,9 @@ class _CompareWindowState extends State<CompareWindow> {
                             : controller.canCompare
                             ? controller.compare
                             : null,
-                        child: Text(controller.busy ? '中断' : '再比較'),
+                        child: Text(
+                          controller.busy ? 'Cancel' : 'Compare Again',
+                        ),
                       ),
                     ],
                   ),
@@ -452,103 +535,36 @@ class _CompareWindowState extends State<CompareWindow> {
                           if (mounted) controller.setRows(rows);
                         });
                       }
-                      return Listener(
-                        onPointerSignal: (event) {
-                          if (event is PointerScrollEvent &&
-                              event.scrollDelta.dy != 0) {
-                            GestureBinding.instance.pointerSignalResolver
-                                .register(
-                                  event,
-                                  (_) => wheel(event.scrollDelta.dy),
-                                );
-                          }
-                        },
-                        child: Row(
-                          children: [
-                            pane(true),
-                            VerticalDivider(
-                              width: 1,
-                              thickness: 1,
-                              color: Theme.of(context).dividerColor
-                                  .withValues(alpha: 0.2),
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _syncScrollPosition();
+                      });
+                      return Scrollbar(
+                        controller: verticalScroll,
+                        thumbVisibility: true,
+                        child: CustomScrollView(
+                          controller: verticalScroll,
+                          slivers: [
+                            SliverPersistentHeader(
+                              pinned: true,
+                              delegate: _PinnedPaneDelegate(
+                                extent: bounds.maxHeight,
+                                child: Row(
+                                  children: [
+                                    pane(true),
+                                    VerticalDivider(
+                                      width: 1,
+                                      thickness: 1,
+                                      color: Theme.of(context).dividerColor
+                                          .withValues(alpha: 0.2),
+                                    ),
+                                    pane(false),
+                                  ],
+                                ),
+                              ),
                             ),
-                            pane(false),
-                            SizedBox(
-                              width: 18,
-                              child: LayoutBuilder(
-                                builder: (context, track) {
-                                  final height = track.maxHeight;
-                                  final thumb = math.max(
-                                    32.0,
-                                    height *
-                                        math.min(
-                                          1,
-                                          controller.visibleRows /
-                                              math.max(1, controller.rowCount),
-                                        ),
-                                  );
-                                  final travel = math.max(0.0, height - thumb);
-                                  void move(double y) {
-                                    if (travel > 0) {
-                                      controller.scrollTo(
-                                        (((y - thumb / 2) / travel).clamp(
-                                                  0.0,
-                                                  1.0,
-                                                ) *
-                                                controller.maxTop)
-                                            .round(),
-                                      );
-                                    }
-                                  }
-
-                                  return Semantics(
-                                    label: '左右同期スクロール',
-                                    value: '${controller.topRow + 1}行目',
-                                    increasedValue:
-                                        '${(controller.topRow + controller.visibleRows).clamp(0, controller.maxTop) + 1}行目',
-                                    decreasedValue:
-                                        '${(controller.topRow - controller.visibleRows).clamp(0, controller.maxTop) + 1}行目',
-                                    onIncrease: () => controller.scrollTo(
-                                      controller.topRow +
-                                          controller.visibleRows,
-                                    ),
-                                    onDecrease: () => controller.scrollTo(
-                                      controller.topRow -
-                                          controller.visibleRows,
-                                    ),
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.opaque,
-                                      onTapDown: (d) =>
-                                          move(d.localPosition.dy),
-                                      onVerticalDragUpdate: (d) =>
-                                          move(d.localPosition.dy),
-                                      child: Stack(
-                                        children: [
-                                          Positioned(
-                                            top: controller.maxTop == 0
-                                                ? 0
-                                                : travel *
-                                                      controller.topRow /
-                                                      controller.maxTop,
-                                            left: 5,
-                                            right: 5,
-                                            height: math.min(height, thumb),
-                                            child: DecoratedBox(
-                                              decoration: BoxDecoration(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .outline
-                                                    .withValues(alpha: 0.45),
-                                                borderRadius:
-                                                    BorderRadius.circular(5),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
+                            SliverToBoxAdapter(
+                              child: SizedBox(
+                                height: controller.maxTop * hexRowHeight,
                               ),
                             ),
                           ],
@@ -575,19 +591,22 @@ class _CompareWindowState extends State<CompareWindow> {
                     spacing: 20,
                     runSpacing: 4,
                     children: [
-                      const Text('同一位置比較', style: TextStyle(fontSize: 12)),
+                      const Text(
+                        'Same-offset comparison',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       Text(
                         controller.status,
                         style: const TextStyle(fontSize: 12),
                       ),
                       if (controller.pair && !controller.invalid)
                         Text(
-                          '${controller.complete ? '差分' : '検出済み'} ${controller.diffBytes} バイト / ${controller.diffRuns} 区間',
+                          '${controller.complete ? 'Differences' : 'Found so far'} ${controller.diffBytes} bytes / ${controller.diffRuns} ranges',
                           style: const TextStyle(fontSize: 12),
                         ),
                       if (controller.selected != null)
                         Text(
-                          '${controller.selectedLeft ? '左' : '右'} 0x${controller.selected!.toRadixString(16).padLeft(8, '0').toUpperCase()}',
+                          '${controller.selectedLeft ? 'Left' : 'Right'} 0x${controller.selected!.toRadixString(16).padLeft(8, '0').toUpperCase()}',
                           style: const TextStyle(fontSize: 12),
                         ),
                       if (controller.complete)
@@ -596,7 +615,7 @@ class _CompareWindowState extends State<CompareWindow> {
                           style: const TextStyle(fontSize: 12),
                         ),
                       const Text(
-                        '赤: 不一致  ·  橙: 片側のみ',
+                        'Red: different  ·  Orange: one side only',
                         style: TextStyle(fontSize: 12),
                       ),
                     ],
@@ -609,4 +628,28 @@ class _CompareWindowState extends State<CompareWindow> {
       ),
     ),
   );
+}
+
+class _PinnedPaneDelegate extends SliverPersistentHeaderDelegate {
+  const _PinnedPaneDelegate({required this.extent, required this.child});
+
+  final double extent;
+  final Widget child;
+
+  @override
+  double get minExtent => extent;
+
+  @override
+  double get maxExtent => extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => child;
+
+  @override
+  bool shouldRebuild(covariant _PinnedPaneDelegate oldDelegate) =>
+      extent != oldDelegate.extent || child != oldDelegate.child;
 }

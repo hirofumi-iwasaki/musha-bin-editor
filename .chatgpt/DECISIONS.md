@@ -4,9 +4,10 @@
 
 ## 1. 目的と確定方針
 
-- プロジェクト名: MushagaeshiBinDiff。
+- Application name: Mushaaeshi Binary Editor (exact spelling requested on 2026-09-14).
+- Repository/package: musha-bin-editor / mushaaeshi_binary_editor.
 - 配置先: ~/Github/musha-bin-editor（2026-09-14に旧MushagaeshiBinDiffから移動）。
-- GitHubリポジトリー: https://github.com/hirofumi-iwasaki/musha-bin-editor 。既存のmainブランチを使用。アプリ表示名はMushagaeshi Bin Diffを維持。
+- GitHubリポジトリー: https://github.com/hirofumi-iwasaki/musha-bin-editor 。既存のmainブランチを使用。アプリ表示名はMushaaeshi Binary Editorを維持。
 - 2つのバイナリーファイルを比較表示し、差分箇所を色替えで示すバイナリーエディターを開発する。
 - オープンソースソフトウェアとして、最終的にGitHubへ公開する。
 - 公開ライセンスはGNU GPLv3。直前の推奨に沿い、表記はGPL-3.0-or-later（第3版またはそれ以降）とする。詳細は[ライセンス方針](LICENSE_POLICY.md)を参照。
@@ -22,7 +23,7 @@
 
 ### 画面・比較
 
-- アプリ表示名はMushagaeshi Bin Diff。初期版は1ウィンドウ・1比較セッションとする。
+- アプリ表示名はMushaaeshi Binary Editor。初期版は1ウィンドウ・1比較セッションとする。
 - 左右にオフセット、16進数、ASCIIを表示する。既定は16バイト/行、左右共通で8バイト/行にも切り替えられる設計とする。
 - ASCIIは0x20〜0x7Eを表示し、それ以外は「.」。初期版では文字欄からの編集は行わない。
 - 同じ絶対オフセットのバイト同士を比較し、不一致バイトのHEX背景を赤系で強調する。
@@ -104,3 +105,14 @@ macOS限定で開始するという最新方針を優先する。以下は過去
 - GQ-4X4の公開解析例: https://github.com/kevinclark/gq-4x4
 
 今回の対応OS表記の確認: https://opensource.apple.com/releases/ （2026-09-13）
+
+## UI revision decisions — 2026-09-14
+
+- Use the exact application name **Mushaaeshi Binary Editor** in the macOS bundle, window, app menu, executable and README.
+- Use English for all application-owned UI text, dialogs, accessibility labels and README content. Defer language selection/localization.
+- Remove the redundant in-content title row and the Open Sample action.
+- Handle mouse-wheel and two-finger trackpad input directly over either binary pane and synchronize vertical scrolling.
+- Package a standalone macOS application at `dist/Mushaaeshi Binary Editor.app`; keep generated binaries outside Git.
+- Retain the existing bundle identifier for continuity of macOS app identity.
+- Route wheel and trackpad input through Flutter's standard vertical ScrollPosition without sign reversal or fixed sensitivity multipliers, so macOS natural-scrolling preferences are respected.
+- Accept one regular file dropped from Finder onto a binary pane; the pane under the pointer selects the left or right comparison side. Report invalid drops and read failures in English.

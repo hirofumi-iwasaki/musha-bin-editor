@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushagaeshi_bin_diff/core/comparison.dart';
+import 'package:mushaaeshi_binary_editor/core/comparison.dart';
 
 Uint8List b(List<int> values) => Uint8List.fromList(values);
 

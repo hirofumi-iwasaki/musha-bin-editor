@@ -116,3 +116,36 @@
 - 移動先の初期コミットを保持。アプリ名と機能は変更しない。
 - 移動後に依存情報を再生成し、静的検査（指摘なし）、10件のテスト、macOS Releaseビルドの成功を確認。
 - このコミットを表示・比較試作の保存点とする。GitHubへの送信先はorigin/main。配布用リリースの作成は今回の範囲外。
+
+### 2026-09-14 Release 0.1.0 UI revision
+
+- Adopted the exact application name **Mushaaeshi Binary Editor** for the macOS bundle, executable, native window, application menu, Flutter UI and public README. The existing bundle identifier remains unchanged for app identity continuity.
+- Converted the README and all application-owned UI, dialog, error, status and accessibility text to English. Localization remains deferred.
+- Removed the redundant in-content application title row. Open Sample was retained at this intermediate revision and removed in the final 0.1.0 revision below.
+- Added synchronized vertical mouse-wheel and two-finger trackpad scrolling directly over either binary pane, including narrow layouts with horizontal overflow. Added regression coverage for both panes at 1440 px and 980 px window widths.
+- Added `tool/build_macos.sh` to create the standalone application at `dist/Mushaaeshi Binary Editor.app`.
+- Validation completed: Flutter static analysis reported no issues; all 12 tests passed; a fresh macOS Release build succeeded. Native UI inspection confirmed English labels, the 24-byte/four-range sample result, and synchronized scrolling from each pane.
+- Bundle verification completed: display name, bundle name and executable are `Mushaaeshi Binary Editor`; development region is English; the executable is arm64; strict deep code-signature verification passes with the expected local ad-hoc signature. Public distribution signing and notarization remain future release work.
+
+### 2026-09-14 Native scrolling and file drop follow-up
+
+- Replaced custom wheel/trackpad sign handling, fixed row-step accumulation and the hand-built scrollbar with Flutter's standard vertical `ScrollPosition` and `Scrollbar`. Raw macOS/Flutter vertical deltas are forwarded unchanged, preserving the user's natural-scrolling setting and standard sensitivity/physics while both panes share one position.
+- Added native macOS file-URL drag/drop. Exactly one regular file is accepted; the window half under the pointer maps to the left or right pane, security-scoped read access is retained, and the existing comparison pipeline reloads automatically.
+- Added English invalid-drop/read-failure messages and English accessibility labels identifying each pane as a left/right single-file drop target.
+- Confirmed that the existing read-only user-selected-file sandbox entitlement is sufficient; no dependency or additional entitlement was added.
+- Final validation: Flutter static analysis reported no issues; all 13 tests passed; the macOS Release package rebuilt successfully after native Swift compilation. Native UI inspection confirmed the English drop-target accessibility labels, the standard macOS scrollbar, and synchronized movement over both left and right panes. The packaged executable is arm64 and strict deep signature verification passes with the expected local ad-hoc signature and read-only user-selected-file sandbox entitlement.
+
+### 2026-09-14 Finder drop event-routing repair
+
+- Reproduced the design flaw in the first drag/drop implementation: registering the `NSWindow` did not make it the effective destination when the Flutter content view occupied the window.
+- Added a dedicated AppKit root drop-host view around the Flutter view controller. The host registers file URL types, validates one regular Finder file, retains security-scoped access, and forwards live drag/drop coordinates through the existing method channel.
+- Moved left/right selection to Flutter hit-testing against the actual rendered pane rectangles. The full pane header and HEX body are targets; areas outside both panes show an English guidance error.
+- Added a primary-color hover border/background for the actual pane under the drag while retaining the English accessibility drop-target labels.
+- Extended tests for native message routing, real pane coordinates, left/right selection, English errors, accessibility labels and hover state. Static analysis is clean and all 13 tests pass. The Release Swift build succeeds and the packaged app launches with the Flutter surface hosted correctly.
+
+### 2026-09-14 Final 0.1.0 sample removal
+
+- Removed Open Sample completely from the product UI and removed its user-facing README/status references.
+- Removed the `DEMO` launch path. The generated file-pair fixture remains as `loadBenchmarkFixture` because controller regression tests and the opt-in rendering benchmark require deterministic data; it is not reachable from normal product UI.
+- Updated widget and scrolling tests to assert that Open Sample is absent while Open Left, Open Right, synchronized scrolling and Finder drop targets remain available.
+- Final validation completed: static analysis reported no issues; all 13 tests passed; a clean macOS Release build and package succeeded after regenerating nested signatures. The packaged executable is arm64 and strict deep code-signature verification passes.

@@ -66,3 +66,6 @@ doc/api/
 
 # This is an application: keep resolved dependency versions reproducible.
 !pubspec.lock
+
+# Locally packaged macOS application
+/dist/

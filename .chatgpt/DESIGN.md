@@ -1,4 +1,4 @@
-# Mushagaeshi Bin Diff 詳細設計
+# Mushaaeshi Binary Editor 詳細設計
 
 作成日: 2026-09-13
 状態: 2026-09-13にユーザーが初期開発の方針として採用。決定事項はDECISIONS.mdに集約。性能目標・容量等の暫定数値と実機検証事項は未確定であり、実装・評価で調整する。
@@ -30,7 +30,7 @@ ASCIIは0x20〜0x7Eをそのまま表示し、それ以外は「.」。初期版
 
 概略（実装画面ではなく構造案）:
 
-    Mushagaeshi Bin Diff
+    Mushaaeshi Binary Editor
     [左を開く] [右を開く]  [前の差分] [次の差分] [移動]
     ┌ 左: original.bin    [編集 OFF] ┬ 右: modified.bin * [編集 ON] ┐
     │ offset  HEX            ASCII │ offset  HEX            ASCII │
@@ -182,3 +182,13 @@ GitHubリポジトリーはhirofumi-iwasaki/musha-bin-editorに確定。配布�
 - WinMergeの16進比較: https://manual.winmerge.org/en/Compare_bin.html
 
 BzEditorはユーザーが挙げた操作感の参考。今回その実装・ライセンス・機能の詳細調査は行っていない。
+
+## Adopted UI refinements — 2026-09-14
+
+English is now the sole application language. The additional content title/banner and Open Sample action are removed; the native macOS title bar identifies the app. Wheel and pan/zoom trackpad input over either binary pane must update the shared vertical viewport, including when the pane overflows horizontally. The `.app` artifact is packaged into `dist/` for direct Finder launch.
+
+Vertical input is handled by Flutter's standard `ScrollPosition`, using the macOS-provided delta and direction unchanged. Each binary pane forwards only vertical pointer-scroll events past its nested horizontal viewport; Flutter handles trackpad drag physics and the scrollbar. The visible first row is derived from the standard pixel position.
+
+The macOS window is a file-URL drag destination. It accepts exactly one regular file, determines left/right from the drop location, retains security-scoped read access under the existing read-only user-selected-file entitlement, and sends the path and side through the existing platform channel. Flutter opens the file through the same comparison controller path used by the file chooser. Each pane exposes an English accessibility drop-target label.
+
+The effective AppKit drag destination is a dedicated root `NSView` that hosts the Flutter view controller, not the `NSWindow`. It forwards live drag coordinates in flipped view coordinates. Flutter performs final hit-testing against the actual rendered pane bounds, so both the pane header and hexadecimal body are accepted while toolbar/status-bar drops are rejected. The active pane receives a visible highlight during the drag.

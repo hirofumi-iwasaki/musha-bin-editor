@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushagaeshi_bin_diff/application/compare_controller.dart';
+import 'package:mushaaeshi_binary_editor/application/compare_controller.dart';
 
 Future<void> idle(CompareController c) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
@@ -12,46 +12,41 @@ Future<void> idle(CompareController c) async {
 }
 
 void main() {
-  test(
-    'sample, difference navigation and rapid viewport changes stay coherent',
-    () async {
-      final c = CompareController();
-      addTearDown(c.dispose);
-      await c.demo();
-      await idle(c);
-      expect(c.error, null);
-      expect(c.diffBytes, 24);
-      expect(c.diffRuns, 4);
-      await c.compare(forward: true);
-      await idle(c);
-      expect(c.selected, 0x12);
-      await c.compare(forward: true);
-      await idle(c);
-      expect(c.selected, 0x40);
-      await c.compare(forward: false);
-      await idle(c);
-      expect(c.selected, 0x12);
-      for (var row = 1; row <= 50; row++) {
-        c.scrollTo(row);
-      }
-      await c.refresh();
-      expect(c.offset, 800);
-      expect(c.leftBytes.first, 800 % 256);
-      c.setWidth(8);
-      await c.refresh();
-      expect(c.offset, 800);
-      expect(c.leftBytes.first, 800 % 256);
-      c.jump(c.length - 1);
-      await c.refresh();
-      expect(c.selectedLeft, false);
-      expect(c.selected, 4107);
-    },
-  );
+  test('benchmark fixture, difference navigation and rapid viewport changes stay coherent', () async {
+    final c = CompareController();
+    addTearDown(c.dispose);
+    await c.loadBenchmarkFixture();
+    await idle(c);
+    expect(c.error, null);
+    expect(c.diffBytes, 24);
+    expect(c.diffRuns, 4);
+    await c.compare(forward: true);
+    await idle(c);
+    expect(c.selected, 0x12);
+    await c.compare(forward: true);
+    await idle(c);
+    expect(c.selected, 0x40);
+    await c.compare(forward: false);
+    await idle(c);
+    expect(c.selected, 0x12);
+    for (var row = 1; row <= 50; row++) {
+      c.scrollTo(row);
+    }
+    await c.refresh();
+    expect(c.offset, 800);
+    expect(c.leftBytes.first, 800 % 256);
+    c.setWidth(8);
+    await c.refresh();
+    expect(c.offset, 800);
+    expect(c.leftBytes.first, 800 % 256);
+    c.jump(c.length - 1);
+    await c.refresh();
+    expect(c.selectedLeft, false);
+    expect(c.selected, 4107);
+  });
 
   test('external changes invalidate results and clearing a scan does not publish stale results', () async {
-    final dir = await Directory.systemTemp.createTemp(
-      'mushagaeshi-controller-',
-    );
+    final dir = await Directory.systemTemp.createTemp('mushaaeshi-controller-');
     final c = CompareController();
     try {
       final a = File('${dir.path}/a');

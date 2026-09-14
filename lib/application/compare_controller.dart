@@ -22,7 +22,7 @@ class CompareController extends ChangeNotifier {
   bool busy = false;
   bool complete = false;
   bool invalid = false;
-  String status = '左右のファイルを開くか、サンプルでお試しください';
+  String status = 'Open two files to compare';
   String? error;
   int diffBytes = 0;
   int diffRuns = 0;
@@ -35,7 +35,7 @@ class CompareController extends ChangeNotifier {
   Isolate? _worker;
   ReceivePort? _port;
   StreamSubscription<dynamic>? _subscription;
-  Directory? _demoDirectory;
+  Directory? _benchmarkDirectory;
   Future<void> _readQueue = Future.value();
 
   int get length => math.max(left?.stamp.size ?? 0, right?.stamp.size ?? 0);
@@ -72,21 +72,26 @@ class CompareController extends ChangeNotifier {
       if (canCompare) {
         await compare();
       } else {
-        status = '片側のみ表示 · 閲覧専用の試作';
+        status = 'One file open · Read-only preview';
         _notify();
       }
     } catch (e) {
       if (ticket == _openGeneration && !_disposed) {
-        error = e.toString();
+        error = 'Unable to open file: $e';
         _notify();
       }
     }
   }
 
-  Future<void> demo() async {
+  void reportError(String message) {
+    error = message;
+    _notify();
+  }
+
+  Future<void> loadBenchmarkFixture() async {
     try {
-      _demoDirectory ??= await Directory.systemTemp.createTemp(
-        'mushagaeshi-demo-',
+      _benchmarkDirectory ??= await Directory.systemTemp.createTemp(
+        'mushaaeshi-benchmark-',
       );
       final a = Uint8List.fromList(List.generate(4096, (i) => i % 256));
       final b = Uint8List.fromList([
@@ -100,8 +105,8 @@ class CompareController extends ChangeNotifier {
       b[0x3FF] = 0;
       b[0x400] = 0xEE;
       b[0x401] = 0;
-      final lp = '${_demoDirectory!.path}/original.bin';
-      final rp = '${_demoDirectory!.path}/modified.bin';
+      final lp = '${_benchmarkDirectory!.path}/original.bin';
+      final rp = '${_benchmarkDirectory!.path}/modified.bin';
       await File(lp).writeAsBytes(a);
       await File(rp).writeAsBytes(b);
       await open(lp, true);
@@ -141,7 +146,7 @@ class CompareController extends ChangeNotifier {
         loading = false;
         complete = false;
         error = e.toString();
-        status = '読込エラー · ファイルを開き直してください';
+        status = 'Read error · Reopen the file';
       }
       _notify();
     });
@@ -181,7 +186,7 @@ class CompareController extends ChangeNotifier {
     if (at < 0 || at >= length) return;
     selected = at;
     if (!busy) {
-      status = 'オフセット 0x${at.toRadixString(16).toUpperCase()}';
+      status = 'Offset 0x${at.toRadixString(16).toUpperCase()}';
     }
     if (at >= ((selectedLeft ? left : right)?.stamp.size ?? 0)) {
       selectedLeft = !selectedLeft;
@@ -199,7 +204,7 @@ class CompareController extends ChangeNotifier {
       complete = false;
       diffBytes = diffRuns = processed = 0;
     }
-    status = forward == null ? '全体を比較中…' : '差分を検索中…';
+    status = forward == null ? 'Comparing files…' : 'Finding difference…';
     _notify();
     final port = ReceivePort();
     _port = port;
@@ -221,14 +226,19 @@ class CompareController extends ChangeNotifier {
             diffBytes = m['bytes'] as int;
             diffRuns = m['runs'] as int;
             elapsedMs = m['milliseconds'] as int;
-            status = diffBytes == 0 ? '比較完了 · 内容は同一です' : '比較完了';
+            status = diffBytes == 0
+                ? 'Comparison complete · Files are identical'
+                : 'Comparison complete';
           } else {
             final target = m['target'] as int?;
             if (target == null) {
-              status = forward ? 'これより後に差分はありません' : 'これより前に差分はありません';
+              status = forward
+                  ? 'No later differences'
+                  : 'No earlier differences';
             } else {
               jump(target);
-              status = '差分 0x${target.toRadixString(16).toUpperCase()}';
+              status =
+                  'Differences 0x${target.toRadixString(16).toUpperCase()}';
             }
           }
           unawaited(_subscription?.cancel());
@@ -239,7 +249,7 @@ class CompareController extends ChangeNotifier {
           invalid = true;
           complete = false;
           error = m['message'] as String;
-          status = '比較エラー · ファイルを開き直してください';
+          status = 'Comparison error · Reopen the files';
           unawaited(_subscription?.cancel());
           _port?.close();
           _port = null;
@@ -266,7 +276,7 @@ class CompareController extends ChangeNotifier {
       if (generation == _generation && !_disposed) {
         stop(notify: false);
         error = e.toString();
-        status = '比較を開始できません';
+        status = 'Unable to start comparison';
         _notify();
       }
     }
@@ -282,7 +292,7 @@ class CompareController extends ChangeNotifier {
     _port = null;
     if (busy) {
       busy = false;
-      status = '中断しました · 表示範囲の差分は確認できます';
+      status = 'Canceled · Visible differences remain available';
     }
     if (notify) _notify();
   }
@@ -293,9 +303,9 @@ class CompareController extends ChangeNotifier {
     ++_openGeneration;
     ++_viewGeneration;
     stop(notify: false);
-    final demo = _demoDirectory;
-    if (demo != null) {
-      unawaited(demo.delete(recursive: true).catchError((_) => demo));
+    final fixture = _benchmarkDirectory;
+    if (fixture != null) {
+      unawaited(fixture.delete(recursive: true).catchError((_) => fixture));
     }
     super.dispose();
   }

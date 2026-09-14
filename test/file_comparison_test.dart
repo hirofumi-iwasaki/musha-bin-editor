@@ -3,12 +3,12 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mushagaeshi_bin_diff/infrastructure/file_comparison.dart';
+import 'package:mushaaeshi_binary_editor/infrastructure/file_comparison.dart';
 
 void main() {
   late Directory directory;
   setUp(() async {
-    directory = await Directory.systemTemp.createTemp('mushagaeshi-test-');
+    directory = await Directory.systemTemp.createTemp('mushaaeshi-test-');
   });
   tearDown(() async {
     await directory.delete(recursive: true);
