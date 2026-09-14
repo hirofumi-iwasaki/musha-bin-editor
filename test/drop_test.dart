@@ -51,19 +51,49 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    Finder dropTarget(String label) => find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.properties.label == label,
+    );
+    final leftPoint = tester.getCenter(
+      dropTarget(
+        'Left file drop target. Drop one binary file to open it on the left.',
+      ),
+    );
+    final rightPoint = tester.getCenter(
+      dropTarget(
+        'Right file drop target. Drop one binary file to open it on the right.',
+      ),
+    );
+
     await sendNativeMethod(
-      const MethodCall('fileDropped', {
+      MethodCall('fileDragUpdated', {'x': leftPoint.dx, 'y': leftPoint.dy}),
+    );
+    await tester.pump();
+    final highlighted = tester.widgetList<AnimatedContainer>(
+      find.byType(AnimatedContainer),
+    );
+    expect(
+      highlighted.where(
+        (widget) => (widget.decoration as BoxDecoration).color != null,
+      ),
+      hasLength(1),
+    );
+
+    await sendNativeMethod(
+      MethodCall('fileDropped', {
         'path': '/tmp/left.bin',
-        'side': 'Left',
+        'x': leftPoint.dx,
+        'y': leftPoint.dy,
       }),
     );
     expect(controller.openedPath, '/tmp/left.bin');
     expect(controller.openedLeft, isTrue);
 
     await sendNativeMethod(
-      const MethodCall('fileDropped', {
+      MethodCall('fileDropped', {
         'path': '/tmp/right.bin',
-        'side': 'Right',
+        'x': rightPoint.dx,
+        'y': rightPoint.dy,
       }),
     );
     expect(controller.openedPath, '/tmp/right.bin');
@@ -75,9 +105,6 @@ void main() {
       }),
     );
     expect(controller.error, 'Drop exactly one file at a time.');
-    Finder dropTarget(String label) => find.byWidgetPredicate(
-      (widget) => widget is Semantics && widget.properties.label == label,
-    );
     expect(
       dropTarget(
         'Left file drop target. Drop one binary file to open it on the left.',

@@ -51,9 +51,12 @@ class _CompareWindowState extends State<CompareWindow> {
   late final controller = widget.controller ?? CompareController();
   final leftFocus = FocusNode(debugLabel: 'Left hex');
   final rightFocus = FocusNode(debugLabel: 'Right hex');
+  final leftPaneKey = GlobalKey();
+  final rightPaneKey = GlobalKey();
   final verticalScroll = ScrollController();
   static const platform = MethodChannel('mushaaeshi/files');
   bool picking = false;
+  bool? hoveredDropLeft;
 
   @override
   void initState() {
@@ -117,21 +120,56 @@ class _CompareWindowState extends State<CompareWindow> {
       final arguments = call.arguments;
       if (arguments is! Map ||
           arguments['path'] is! String ||
-          arguments['side'] is! String) {
+          arguments['x'] is! num ||
+          arguments['y'] is! num) {
         controller.reportError('Unable to open the dropped file.');
         return;
       }
-      await controller.open(
-        arguments['path'] as String,
-        arguments['side'] == 'Left',
+      final side = _dropSideAt(
+        Offset(
+          (arguments['x'] as num).toDouble(),
+          (arguments['y'] as num).toDouble(),
+        ),
       );
+      if (side == null) {
+        controller.reportError(
+          'Drop the file on the left or right binary pane.',
+        );
+      } else {
+        await controller.open(arguments['path'] as String, side);
+      }
+      if (mounted) setState(() => hoveredDropLeft = null);
+    } else if (call.method == 'fileDragUpdated') {
+      final arguments = call.arguments;
+      if (arguments is Map && arguments['x'] is num && arguments['y'] is num) {
+        final side = _dropSideAt(
+          Offset(
+            (arguments['x'] as num).toDouble(),
+            (arguments['y'] as num).toDouble(),
+          ),
+        );
+        if (side != hoveredDropLeft) setState(() => hoveredDropLeft = side);
+      }
+    } else if (call.method == 'fileDragExited') {
+      if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
     } else if (call.method == 'fileDropError') {
       final arguments = call.arguments;
       final message = arguments is Map ? arguments['message'] : null;
       controller.reportError(
         message is String ? message : 'Unable to open the dropped file.',
       );
+      if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
     }
+  }
+
+  bool? _dropSideAt(Offset point) {
+    for (final entry in [(leftPaneKey, true), (rightPaneKey, false)]) {
+      final box = entry.$1.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) continue;
+      final local = box.globalToLocal(point);
+      if ((Offset.zero & box.size).contains(local)) return entry.$2;
+    }
+    return null;
   }
 
   Future<void> open(bool left) async {
@@ -283,79 +321,100 @@ class _CompareWindowState extends State<CompareWindow> {
   Widget pane(bool left) {
     final file = left ? controller.left : controller.right;
     return Expanded(
-      child: Semantics(
-        container: true,
-        label:
-            '${left ? 'Left' : 'Right'} file drop target. Drop one binary file to open it on the ${left ? 'left' : 'right'}.',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              height: 62,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Theme.of(context).dividerColor
-                        .withValues(alpha: 0.15),
-                  ),
+      child: AnimatedContainer(
+        key: left ? leftPaneKey : rightPaneKey,
+        duration: const Duration(milliseconds: 100),
+        decoration: BoxDecoration(
+          color: hoveredDropLeft == left
+              ? Theme.of(context).colorScheme.primaryContainer
+                    .withValues(alpha: 0.32)
+              : null,
+          border: hoveredDropLeft == left
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.primary,
+                  width: 3,
+                )
+              : null,
+        ),
+        child: Semantics(
+          container: true,
+          label:
+              '${left ? 'Left' : 'Right'} file drop target. Drop one binary file to open it on the ${left ? 'left' : 'right'}.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                height: 62,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    left ? Icons.file_present_outlined : Icons.compare_outlined,
-                    size: 21,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : file.path.split('/').last}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        Tooltip(
-                          message: file?.path ?? '',
-                          child: Text(
-                            file == null
-                                ? 'Choose Open ${left ? 'Left' : 'Right'}'
-                                : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).dividerColor
+                          .withValues(alpha: 0.15),
                     ),
                   ),
-                  const Text('Read-only', style: TextStyle(fontSize: 11)),
-                ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      left
+                          ? Icons.file_present_outlined
+                          : Icons.compare_outlined,
+                      size: 21,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : file.path.split('/').last}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Tooltip(
+                            message: file?.path ?? '',
+                            child: Text(
+                              file == null
+                                  ? 'Choose Open ${left ? 'Left' : 'Right'}'
+                                  : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Text('Read-only', style: TextStyle(fontSize: 11)),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: HexPane(
-                bytes: left ? controller.leftBytes : controller.rightBytes,
-                other: left ? controller.rightBytes : controller.leftBytes,
-                offset: controller.offset,
-                size: file?.stamp.size ?? 0,
-                totalSize: controller.length,
-                columns: controller.bytesPerRow,
-                isLeft: left,
-                hasFile: file != null,
-                hasOther: (left ? controller.right : controller.left) != null,
-                loading: controller.loading,
-                invalid: controller.invalid,
-                selected: controller.selectedLeft == left
-                    ? controller.selected
-                    : null,
-                onSelect: (at) => controller.select(at, left),
-                onVerticalPointerScroll: _pointerScroll,
-                focusNode: left ? leftFocus : rightFocus,
+              Expanded(
+                child: HexPane(
+                  bytes: left ? controller.leftBytes : controller.rightBytes,
+                  other: left ? controller.rightBytes : controller.leftBytes,
+                  offset: controller.offset,
+                  size: file?.stamp.size ?? 0,
+                  totalSize: controller.length,
+                  columns: controller.bytesPerRow,
+                  isLeft: left,
+                  hasFile: file != null,
+                  hasOther: (left ? controller.right : controller.left) != null,
+                  loading: controller.loading,
+                  invalid: controller.invalid,
+                  selected: controller.selectedLeft == left
+                      ? controller.selected
+                      : null,
+                  onSelect: (at) => controller.select(at, left),
+                  onVerticalPointerScroll: _pointerScroll,
+                  focusNode: left ? leftFocus : rightFocus,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

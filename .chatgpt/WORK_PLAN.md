@@ -134,3 +134,11 @@
 - Added English invalid-drop/read-failure messages and English accessibility labels identifying each pane as a left/right single-file drop target.
 - Confirmed that the existing read-only user-selected-file sandbox entitlement is sufficient; no dependency or additional entitlement was added.
 - Final validation: Flutter static analysis reported no issues; all 13 tests passed; the macOS Release package rebuilt successfully after native Swift compilation. Native UI inspection confirmed the English drop-target accessibility labels, the standard macOS scrollbar, and synchronized movement over both left and right panes. The packaged executable is arm64 and strict deep signature verification passes with the expected local ad-hoc signature and read-only user-selected-file sandbox entitlement.
+
+### 2026-09-14 Finder drop event-routing repair
+
+- Reproduced the design flaw in the first drag/drop implementation: registering the `NSWindow` did not make it the effective destination when the Flutter content view occupied the window.
+- Added a dedicated AppKit root drop-host view around the Flutter view controller. The host registers file URL types, validates one regular Finder file, retains security-scoped access, and forwards live drag/drop coordinates through the existing method channel.
+- Moved left/right selection to Flutter hit-testing against the actual rendered pane rectangles. The full pane header and HEX body are targets; areas outside both panes show an English guidance error.
+- Added a primary-color hover border/background for the actual pane under the drag while retaining the English accessibility drop-target labels.
+- Extended tests for native message routing, real pane coordinates, left/right selection, English errors, accessibility labels and hover state. Static analysis is clean and all 13 tests pass. The Release Swift build succeeds and the packaged app launches with the Flutter surface hosted correctly.
