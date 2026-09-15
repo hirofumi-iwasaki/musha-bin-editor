@@ -220,3 +220,20 @@
 - CI results establish native compilation/testing/packaging on the planned Ubuntu baselines. They do not establish all GUI or native save-failure scenarios.
 - Trigger: release/0.4.0 pushes, pull requests, workflow_dispatch (UI availability after default-branch merge). No GitHub Release publication performed; development version unchanged.
 - Next: record remaining manual acceptance and native failure cases, update release metadata when preparing v0.4.0, then publish upon request.
+
+
+### 2026-09-15 v0.5.0 update notification design
+
+- Created release/0.5.0 from synchronized main at 506bda6.
+- Added UPDATE_CHECK_DESIGN.md covering nonblocking GitHub release discovery, stable version comparison, OS/architecture asset links, caching and rate limits, silent failures, lifecycle and macOS network entitlement requirements.
+- Updated the project record index to point to the current design.
+- This is documentation only; no update code, dependency changes, builds or runtime tests were performed. Detailed policy defaults remain proposals.
+- Next: implement the documented service and status notification, then extend CI to the new branch and verify native behavior.
+
+### 2026-09-15 v0.5.0 update notification implementation
+
+- Implemented the first-frame, unawaited update controller and a separate bottom-status notification. It uses package metadata, a 5-second/1 MiB bounded HTTPS client, persisted cadence/backoff state, exact process-ABI asset matching, and user-initiated, allowlisted GitHub links only.
+- Added `package_info_plus`, `shared_preferences`, and `url_launcher`; added `network.client` to both macOS sandbox entitlement files; updated the package version to `0.5.0+5` and the CI push branch to `release/0.5.0`.
+- Added update-specific unit and widget tests. Local `flutter analyze` reported no issues and `flutter test` passed all 40 tests.
+- The controller caches only a validated offered update and its ETag. A valid 200 response with no newer stable offer or an invalid response clears that cache and records a successful validation, so it waits the normal 24-hour interval. Transient retries use deterministic bounded jitter of 2, 4, or 6 minutes rather than randomized jitter.
+- macOS Release build was attempted with `.tooling/flutter/bin/flutter build macos --release` but stopped before compilation because Xcode reported that its license agreements were not accepted and requested `sudo xcodebuild -license`. No entitlement inspection or native package verification was performed. No push or release publication occurred.
