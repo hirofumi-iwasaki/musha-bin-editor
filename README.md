@@ -8,13 +8,13 @@ Version 0.3.0 adds per-file SHA-1 and MD5 hash display to the side-by-side compa
 
 ## v0.4.0 development status
 
-The `release/0.4.0` branch adds Windows x64/Arm64 and Ubuntu x64/Arm64 runners, desktop integration and native save backends. These targets are under development. Native Arm64 builds and automated tests passed on Parallels Windows 11 and Ubuntu 26.04; x64 builds, Ubuntu 22.04/24.04 compatibility and desktop GUI acceptance remain unverified. Package metadata remains at 0.3.0 until release preparation.
+The `release/0.4.0` branch adds Windows x64/Arm64 and Ubuntu x64/Arm64 runners, desktop integration and native save backends. These targets are under development. Native builds, automated tests and packaging passed in GitHub Actions for Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64 and macOS Arm64. The user also reported successful manual operation of the Parallels Windows 11 / Ubuntu 26.04 Arm64 builds. Detailed failure-path and cross-version GUI acceptance remains separate from CI compilation. Package metadata remains at 0.3.0 until release preparation.
 
 Windows/Linux use Ctrl instead of Command for the shortcuts listed below. Their file dialogs, pane drops and window close requests are routed through desktop adapters. Hexadecimal geometry and glyph rendering share measured font metrics, including enlarged text.
 
 Native CI and packaging scripts are included. Run `tool/build_windows.ps1 -Architecture x64` (or `arm64`) on the corresponding Windows host, and `bash tool/build_linux.sh x64` (or `arm64`) on the corresponding Ubuntu host. Each archive includes the full runtime bundle and license/source metadata. Arm64 CI bootstraps the pinned official Flutter source checkout to obtain native Dart/engine artifacts. CI compilation is not a substitute for GUI acceptance.
 
-Ubuntu existing-file replacement currently rejects special permission bits, owner/group changes, ACLs or other extended attributes (including cases where inspection fails), rather than discard metadata. Ordinary rwx permissions are preserved. Native failure/recovery behavior still requires Ubuntu and Windows execution tests. File change detection uses size and modification time and cannot detect every possible external rewrite.
+Ubuntu existing-file replacement currently rejects special permission bits, owner/group changes, ACLs or other extended attributes (including cases where inspection fails), rather than discard metadata. Ordinary rwx permissions are preserved. Detailed native failure/recovery behavior still requires targeted Ubuntu and Windows execution tests. File change detection uses size and modification time and cannot detect every possible external rewrite.
 
 See the [v0.4.0 continuation plan](.chatgpt/RELEASE_0.4.0_PLAN.md) for completed work, remaining checks and the next step.
 
@@ -81,6 +81,14 @@ The extra in-content title row has been removed to leave more space for binary d
 Offsets are hexadecimal, for example `400` or `0x400`.
 
 The hash bar reports the saved file contents on disk. Select **SHA-1** or **MD5** from its dropdown; saving or opening a file recalculates the value.
+
+## GitHub Actions builds
+
+The **Desktop build and package** workflow runs on pushes to `release/0.4.0`, on pull requests, and through `workflow_dispatch`. It builds Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64 and macOS Arm64 using native runners and pinned Flutter 3.47.4. Every job performs dependency resolution, static analysis, tests, a Release build, architecture inspection and artifact upload.
+
+Open the workflow run and download the desired package from **Artifacts**. Ubuntu artifact names include the build OS version; use the oldest supported build baseline for wider compatibility. Downloaded Actions artifacts contain the application distribution ZIP/tar.gz. Publishing a GitHub Release remains a separate step. Manual dispatch availability in GitHub's UI depends on the workflow being present on the default branch after merge.
+
+Verified successful run: [all seven native builds](https://github.com/hirofumi-iwasaki/musha-bin-editor/actions/runs/34933106095) at source commit `9d15351`. The packages retain development version 0.3.0 build 3 until release preparation.
 
 ## Development and packaging
 

@@ -209,3 +209,14 @@
 - Host artifacts: dist/musha-bin-edit-windows-arm64.zip (11,165,203 bytes, SHA-256 0c7e763bf2e5e57a01f3447e6ffa7cec25e00ab976d2ab6c9bb6e3d7143f0e29); dist/musha-bin-edit-linux-arm64.tar.gz (SHA-256 74157c5b60f08ce35906c1617315d8c31c3ec70715ea3e2b7d30de590ea9a3c2).
 - Both archives contain complete runtime bundles, LICENSE, dependency notices/licenses and exact source/build metadata. Version remains 0.3.0 build 3 during development.
 - Unverified: x64 builds, Ubuntu 22.04/24.04 compatibility, GUI launch/drop/save/close acceptance and native save-failure behavior. No push or release publication. Ubuntu 26.04 build is not a substitute for builds against the oldest supported baseline.
+
+
+### 2026-09-15 GitHub Actions native matrix verified
+
+- User reported normal manual operation of the supplied VM builds and requested Actions Arm64/x64 builds.
+- Updated the workflow for clean-runner pub get and Linux liblzma-dev, committed/pushed as 9d15351 on release/0.4.0.
+- Successful run: https://github.com/hirofumi-iwasaki/musha-bin-editor/actions/runs/34933106095. All seven jobs passed: Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64, macOS Arm64.
+- Every job completed native SDK bootstrap, analysis/tests, Release build, package architecture checks and artifact upload. Seven non-expired artifacts confirmed via API.
+- CI results establish native compilation/testing/packaging on the planned Ubuntu baselines. They do not establish all GUI or native save-failure scenarios.
+- Trigger: release/0.4.0 pushes, pull requests, workflow_dispatch (UI availability after default-branch merge). No GitHub Release publication performed; development version unchanged.
+- Next: record remaining manual acceptance and native failure cases, update release metadata when preparing v0.4.0, then publish upon request.

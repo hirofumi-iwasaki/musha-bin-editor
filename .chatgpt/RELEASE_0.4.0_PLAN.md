@@ -29,7 +29,7 @@ Deliver the existing binary comparison and editing application on Windows x64/Ar
 
 - [x] Review v0.3.0 sources and document portability concerns.
 - [x] Record Ubuntu-only x64/Arm64 scope and create release/0.4.0 from merged main.
-- [ ] Prove pinned Flutter/toolchain and plugin builds on Windows x64/Arm64 and Ubuntu x64/Arm64; record actual versions and commands.
+- [x] Prove pinned Flutter/toolchain and plugin builds on Windows x64/Arm64 and Ubuntu x64/Arm64; record actual versions and commands.
 - [x] Add Windows/Linux runners without replacing the existing macOS customization.
 - [x] Extract file dialogs, pane-drop events, window lifecycle and safe-save backend interfaces; retain working macOS implementations.
 - [x] Coordinate document operations: per-pane open generations, immutable save snapshots and cancellation/handle closure before replacement.
@@ -37,7 +37,7 @@ Deliver the existing binary comparison and editing application on Windows x64/Ar
 - [x] Make filename/path handling, Ctrl/Command shortcuts, font metrics and DPI/hit testing portable.
 - [ ] Validate real native drop/open/close behavior, wheel/touchpad behavior and hashes on all targets.
 - [ ] Split portable tests from OS-specific chmod/link/native tests; add save-failure and concurrency coverage.
-- [ ] Add native CI/build/package jobs and inspect complete runtime bundles and architecture of executable/plugins.
+- [x] Add native CI/build/package jobs and inspect complete runtime bundles and architecture of executable/plugins.
 - [ ] Perform clean-system acceptance on all selected targets, including macOS regressions; document failures and limitations.
 - [ ] Prepare version metadata and release artifacts from one validated commit. Publish only when requested.
 
@@ -54,10 +54,10 @@ Expected proposed assets:
 
 ## Resume here
 
-Implementation and local verification progressed on 2026-09-15 under GPT-5.6 Terra delegation. Platform adapters/runners, measured rendering/scroll geometry, save coordination, cancellable workers and native save installers are implemented. Native build/package CI has been written but not run. Parallels Windows 11 Arm64 and Ubuntu 26.04 Arm64 native build/package checks passed at source 7c4dc3a; Windows tests: 25 passed / 4 OS-specific skips; Ubuntu tests: 28 passed / 1 macOS-specific skip. Shared Flutter analysis and all 29 tests passed at the integration checkpoint; macOS Release build/package succeeded; the executable is arm64 and strict deep signature verification passed. The development bundle still reports 0.3.0 build 3.
+Implementation and local verification progressed on 2026-09-15 under GPT-5.6 Terra delegation. Platform adapters/runners, measured rendering/scroll geometry, save coordination, cancellable workers and native save installers are implemented. Native build/package CI passed all seven jobs at 9d15351 (run 34933106095). Parallels Windows 11 Arm64 and Ubuntu 26.04 Arm64 native build/package checks passed at source 7c4dc3a; Windows tests: 25 passed / 4 OS-specific skips; Ubuntu tests: 28 passed / 1 macOS-specific skip. Shared Flutter analysis and all 29 tests passed at the integration checkpoint; macOS Release build/package succeeded; the executable is arm64 and strict deep signature verification passed. The development bundle still reports 0.3.0 build 3.
 
-Next: run Windows/Ubuntu x64 native CI builds and Ubuntu 22.04/24.04 x64/Arm64 validation, then execute desktop acceptance and native save-failure tests. The existing Parallels VMs are native Arm64 and validate Windows 11 / Ubuntu 26.04 only; the 26.04 artifact is not evidence of older Ubuntu compatibility. Do not mark the port complete based only on local Dart tests. Preserve the existing Flutter 3.47.4 pin and bootstrap native Arm64 SDK artifacts from the official pinned source checkout. Package metadata remains 0.3.0 until release preparation.
+Next: complete detailed cross-version desktop acceptance and native save-failure tests, then prepare release version metadata. Windows x64/Arm64 and Ubuntu 22.04/24.04 x64/Arm64 CI builds now pass. The existing Parallels VMs are native Arm64 and validate Windows 11 / Ubuntu 26.04 only; the 26.04 artifact is not evidence of older Ubuntu compatibility. Do not mark the port complete based only on local Dart tests. Preserve the existing Flutter 3.47.4 pin and bootstrap native Arm64 SDK artifacts from the official pinned source checkout. Package metadata remains 0.3.0 until release preparation.
 
-Ubuntu metadata limitation: existing-file replacement rejects special mode bits, owner/group differences, ACLs and all xattrs (or inspection failure). Ordinary rwx bits are preserved. This conservative behavior avoids silently losing access restrictions and needs real Ubuntu validation. macOS 15 and all Windows/Ubuntu GUI runtime checks remain outstanding.
+Ubuntu metadata limitation: existing-file replacement rejects special mode bits, owner/group differences, ACLs and all xattrs (or inspection failure). Ordinary rwx bits are preserved. This conservative behavior avoids silently losing access restrictions and needs real Ubuntu validation. The user reported normal manual operation of the provided Windows 11 / Ubuntu 26.04 Arm64 builds. Detailed test cases and Ubuntu 22.04/24.04 GUI acceptance remain to be recorded; CI success is not equivalent to full desktop runtime acceptance.
 
 At each work stop, update this checklist and append exact changes, validation, unresolved blockers and the next concrete action to WORK_PLAN.md. Consult this plan first; use CROSS_PLATFORM_DESIGN.md for the rationale. Do not carry obsolete historical release status forward as the current goal.
