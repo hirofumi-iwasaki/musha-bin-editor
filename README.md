@@ -8,7 +8,7 @@ Version 0.3.0 adds per-file SHA-1 and MD5 hash display to the side-by-side compa
 
 ## v0.4.0 development status
 
-The `release/0.4.0` branch adds Windows x64/Arm64 and Ubuntu x64/Arm64 runners, desktop integration and native save backends. These targets are under development: Windows/Ubuntu native builds and desktop acceptance have not yet been performed. Package metadata remains at 0.3.0 until release preparation.
+The `release/0.4.0` branch adds Windows x64/Arm64 and Ubuntu x64/Arm64 runners, desktop integration and native save backends. These targets are under development. Native Arm64 builds and automated tests passed on Parallels Windows 11 and Ubuntu 26.04; x64 builds, Ubuntu 22.04/24.04 compatibility and desktop GUI acceptance remain unverified. Package metadata remains at 0.3.0 until release preparation.
 
 Windows/Linux use Ctrl instead of Command for the shortcuts listed below. Their file dialogs, pane drops and window close requests are routed through desktop adapters. Hexadecimal geometry and glyph rendering share measured font metrics, including enlarged text.
 
