@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,19 +67,23 @@ void main() {
       ),
     );
 
-    await sendNativeMethod(
-      MethodCall('fileDragUpdated', {'x': leftPoint.dx, 'y': leftPoint.dy}),
-    );
-    await tester.pump();
-    final highlighted = tester.widgetList<AnimatedContainer>(
-      find.byType(AnimatedContainer),
-    );
-    expect(
-      highlighted.where(
-        (widget) => (widget.decoration as BoxDecoration).color != null,
-      ),
-      hasLength(1),
-    );
+    if (Platform.isMacOS) {
+      // Only macOS supplies hover coordinates through the native channel.
+      // Windows/Linux render hover feedback through desktop_drop instead.
+      await sendNativeMethod(
+        MethodCall('fileDragUpdated', {'x': leftPoint.dx, 'y': leftPoint.dy}),
+      );
+      await tester.pump();
+      final highlighted = tester.widgetList<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+      expect(
+        highlighted.where(
+          (widget) => (widget.decoration as BoxDecoration).color != null,
+        ),
+        hasLength(1),
+      );
+    }
 
     await sendNativeMethod(
       MethodCall('fileDropped', {

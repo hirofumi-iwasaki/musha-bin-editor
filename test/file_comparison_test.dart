@@ -67,18 +67,24 @@ void main() {
     },
   );
 
-  test('metadata-only changes do not invalidate an open file', () async {
-    final file = File('${directory.path}/metadata.bin');
-    await file.writeAsBytes([1, 2, 3, 4]);
-    final original = await FileStamp.read(file.path);
+  test(
+    'metadata-only changes do not invalidate an open file',
+    () async {
+      final file = File('${directory.path}/metadata.bin');
+      await file.writeAsBytes([1, 2, 3, 4]);
+      final original = await FileStamp.read(file.path);
 
-    await Future<void>.delayed(const Duration(milliseconds: 10));
-    await Process.run('chmod', ['400', file.path]);
-    final metadataChanged = await FileStamp.read(file.path);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await Process.run('chmod', ['400', file.path]);
+      final metadataChanged = await FileStamp.read(file.path);
 
-    expect(metadataChanged.changed, isNot(original.changed));
-    expect(metadataChanged.modified, original.modified);
-    expect(metadataChanged.matches(original), isTrue);
-    expect(await PagedFile(file.path, original).read(0, 4), [1, 2, 3, 4]);
-  });
+      expect(metadataChanged.changed, isNot(original.changed));
+      expect(metadataChanged.modified, original.modified);
+      expect(metadataChanged.matches(original), isTrue);
+      expect(await PagedFile(file.path, original).read(0, 4), [1, 2, 3, 4]);
+    },
+    skip: Platform.isWindows
+        ? 'This metadata-only mutation uses the POSIX chmod command.'
+        : false,
+  );
 }

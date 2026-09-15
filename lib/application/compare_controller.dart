@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 import '../infrastructure/file_comparison.dart';
 import '../infrastructure/file_hash.dart';
@@ -56,6 +57,8 @@ class CompareController extends ChangeNotifier {
   Completer<void>? _workerReady;
   Directory? _benchmarkDirectory;
   Future<void> _readQueue = Future.value();
+  Future<Isolate>? _workerStarting;
+  Future<void>? _closeFuture;
 
   int get length => math.max(left?.stamp.size ?? 0, right?.stamp.size ?? 0);
   int get rowCount => (length + bytesPerRow - 1) ~/ bytesPerRow;
@@ -72,7 +75,7 @@ class CompareController extends ChangeNotifier {
       leftHash != null && rightHash != null && leftHash != rightHash;
 
   void setHashAlgorithm(FileHashAlgorithm value) {
-    if (_saving || hashAlgorithm == value) return;
+    if (_disposed || _saving || hashAlgorithm == value) return;
     hashAlgorithm = value;
     final l = left;
     final r = right;
@@ -155,6 +158,7 @@ class CompareController extends ChangeNotifier {
     bool isLeft, {
     bool allowDuringSave = false,
   }) async {
+    if (_disposed) return;
     if (_saving && !allowDuringSave) {
       error = 'A save is in progress. Wait before opening another file.';
       _notify();
@@ -477,7 +481,7 @@ class CompareController extends ChangeNotifier {
               'The file was saved, but could not be reopened.',
             );
           } else {
-            status = 'Saved ${destination.split('/').last}';
+            status = 'Saved ${p.basename(destination)}';
           }
         } catch (_) {
           result = const SaveResult(
@@ -591,7 +595,7 @@ class CompareController extends ChangeNotifier {
     _workerReady = Completer<void>();
     _workerClosed = Completer<void>();
     try {
-      final worker = await Isolate.spawn(compareWorker, <String, Object>{
+      final starting = Isolate.spawn(compareWorker, <String, Object>{
         'port': port.sendPort,
         'left': left!.path,
         'right': right!.path,
@@ -603,6 +607,9 @@ class CompareController extends ChangeNotifier {
           'cursor': selected ?? (forward ? offset - 1 : offset),
         'forward': ?forward,
       });
+      _workerStarting = starting;
+      final worker = await starting;
+      if (identical(_workerStarting, starting)) _workerStarting = null;
       if (_disposed || generation != _generation) {
         _worker = worker;
         await _stop(notify: false);
@@ -610,6 +617,7 @@ class CompareController extends ChangeNotifier {
         _worker = worker;
       }
     } catch (e) {
+      _workerStarting = null;
       _workerReady = null;
       _workerClosed = null;
       if (generation == _generation && !_disposed) {
@@ -658,21 +666,53 @@ class CompareController extends ChangeNotifier {
     if (notify) _notify();
   }
 
-  @override
-  void dispose() {
+  /// Stops all asynchronous file work and waits until every file handle closes.
+  ///
+  /// Desktop widget disposal cannot await this operation. Callers that remove a
+  /// document directory can await it before deletion.
+  Future<void> close() => _closeFuture ??= _close();
+
+  Future<void> _close() async {
     _disposed = true;
     ++_leftOpenGeneration;
     ++_rightOpenGeneration;
     ++_viewGeneration;
     ++_leftHashGeneration;
     ++_rightHashGeneration;
-    unawaited(_leftHashJob?.cancel() ?? Future<void>.value());
-    unawaited(_rightHashJob?.cancel() ?? Future<void>.value());
-    unawaited(stop(notify: false));
+
+    final leftHash = _leftHashJob;
+    final rightHash = _rightHashJob;
+    _leftHashJob = null;
+    _rightHashJob = null;
+    await Future.wait([
+      leftHash?.cancel() ?? Future<void>.value(),
+      rightHash?.cancel() ?? Future<void>.value(),
+    ]);
+
+    // A close may arrive while an isolate is spawning. Wait for that spawn,
+    // then stop the worker it produced, until neither state remains.
+    while (_workerStarting != null || _worker != null) {
+      final starting = _workerStarting;
+      if (starting != null) {
+        try {
+          await starting;
+        } catch (_) {
+          // _compare reports startup failures when the controller is active.
+        }
+      }
+      await _stop(notify: false);
+    }
+    await _readQueue;
+
     final fixture = _benchmarkDirectory;
     if (fixture != null) {
-      unawaited(fixture.delete(recursive: true).catchError((_) => fixture));
+      await fixture.delete(recursive: true).catchError((_) => fixture);
     }
+  }
+
+  @override
+  void dispose() {
+    unawaited(close());
     super.dispose();
   }
 }

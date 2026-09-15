@@ -1,6 +1,7 @@
 #include "flutter_window.h"
 
 #include <filesystem>
+#include <limits>
 #include <optional>
 #include <string>
 
@@ -11,12 +12,16 @@ namespace {
 
 std::wstring Utf8ToWide(const std::string& value) {
   if (value.empty()) return L"";
+  if (value.size() > static_cast<size_t>((std::numeric_limits<int>::max)())) {
+    return L"";
+  }
+  const int input_length = static_cast<int>(value.size());
   const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-                                         value.data(), value.size(), nullptr, 0);
+                                         value.data(), input_length, nullptr, 0);
   if (length == 0) return L"";
   std::wstring result(length, L'\0');
   if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(),
-                          value.size(), result.data(), length) == 0) {
+                          input_length, result.data(), length) == 0) {
     return L"";
   }
   return result;
@@ -31,11 +36,16 @@ flutter::EncodableValue SaveResult(const std::string& status,
     result[flutter::EncodableValue("message")] = flutter::EncodableValue(message);
   }
   if (!recovery_path.empty()) {
+    if (recovery_path.size() >
+        static_cast<size_t>((std::numeric_limits<int>::max)())) {
+      return flutter::EncodableValue(result);
+    }
+    const int recovery_path_length = static_cast<int>(recovery_path.size());
     const int length = WideCharToMultiByte(CP_UTF8, 0, recovery_path.data(),
-                                            recovery_path.size(), nullptr, 0,
+                                            recovery_path_length, nullptr, 0,
                                             nullptr, nullptr);
     std::string utf8(length, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, recovery_path.data(), recovery_path.size(),
+    WideCharToMultiByte(CP_UTF8, 0, recovery_path.data(), recovery_path_length,
                         utf8.data(), length, nullptr, nullptr);
     result[flutter::EncodableValue("recoveryPath")] = flutter::EncodableValue(utf8);
   }

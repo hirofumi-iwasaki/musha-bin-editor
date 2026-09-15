@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mushagaeshi_binary_editor/application/compare_controller.dart';
 import 'package:mushagaeshi_binary_editor/infrastructure/file_comparison.dart';
 import 'package:mushagaeshi_binary_editor/infrastructure/safe_save.dart';
+import 'package:path/path.dart' as path;
 
 void main() {
   late Directory directory;
@@ -23,6 +24,10 @@ void main() {
   ) async {
     await File(stagedPath).rename(destination);
     return const SaveInstallResult.installed();
+  }
+
+  void closeWhenDone(CompareController controller) {
+    addTearDown(controller.close);
   }
 
   test('a changed destination is rejected before installation', () async {
@@ -59,6 +64,7 @@ void main() {
     await source.writeAsBytes([1]);
     await other.writeAsBytes([2]);
     final controller = CompareController();
+    closeWhenDone(controller);
     await controller.open(source.path, true);
     controller.setEditing(true, true);
     controller.select(0, true);
@@ -92,6 +98,7 @@ void main() {
     await peer.writeAsBytes([2]);
     await other.writeAsBytes([2]);
     final controller = CompareController();
+    closeWhenDone(controller);
     await controller.open(source.path, true);
     await controller.open(peer.path, false);
     final release = Completer<void>();
@@ -177,6 +184,7 @@ void main() {
       final destination = '${directory.path}/saved.bin';
       await source.writeAsBytes([0x10, 0x20, 0x30]);
       final controller = CompareController();
+      closeWhenDone(controller);
       await controller.open(source.path, true);
       controller.setEditing(true, true);
       controller.select(1, true);
@@ -198,7 +206,7 @@ void main() {
         controller.path(true),
         await File(destination).resolveSymbolicLinks(),
       );
-      expect(controller.path(true)?.split('/').last, 'saved.bin');
+      expect(path.basename(controller.path(true)!), 'saved.bin');
       controller.dispose();
     },
   );
@@ -208,6 +216,7 @@ void main() {
     final destination = '${directory.path}/renamed.bin';
     await source.writeAsBytes([0x10, 0x20, 0x30]);
     final controller = CompareController();
+    closeWhenDone(controller);
     await controller.open(source.path, true);
     controller.setEditing(true, true);
     controller.select(1, true);
@@ -242,6 +251,7 @@ void main() {
     final destination = '${directory.path}/saved-as.bin';
     await source.writeAsBytes([1, 2, 3, 4]);
     final controller = CompareController();
+    closeWhenDone(controller);
     await controller.open(source.path, true);
     expect(
       (await controller.save(true, destination, install: install)).outcome,
@@ -251,11 +261,13 @@ void main() {
     // Metadata changes can occur when macOS grants sandbox access or a cloud
     // provider updates extended attributes during a Finder drop.
     await Future<void>.delayed(const Duration(milliseconds: 10));
-    await Process.run('chmod', ['400', source.path]);
+    if (!Platform.isWindows) {
+      await Process.run('chmod', ['400', source.path]);
+    }
     await controller.open(source.path, false);
 
-    expect(controller.path(true)?.split('/').last, 'saved-as.bin');
-    expect(controller.path(false)?.split('/').last, 'original.bin');
+    expect(path.basename(controller.path(true)!), 'saved-as.bin');
+    expect(path.basename(controller.path(false)!), 'original.bin');
     expect(controller.invalid, isFalse);
     expect(controller.error, isNull);
     controller.dispose();
@@ -265,6 +277,7 @@ void main() {
     final source = File('${directory.path}/source.bin');
     await source.writeAsBytes([1, 2, 3]);
     final controller = CompareController();
+    closeWhenDone(controller);
     await controller.open(source.path, true);
     controller.setEditing(true, true);
     controller.select(0, true);
@@ -284,6 +297,7 @@ void main() {
     final source = File('${directory.path}/same.bin');
     await source.writeAsBytes([1, 2, 3]);
     final controller = CompareController();
+    closeWhenDone(controller);
     await controller.open(source.path, true);
     await controller.open(source.path, false);
     expect(controller.right, isNull);
@@ -299,12 +313,16 @@ void main() {
       await source.writeAsBytes([1, 2, 3]);
       await Process.run('ln', [source.path, alias]);
       final controller = CompareController();
+      closeWhenDone(controller);
       await controller.open(source.path, true);
       await controller.open(alias, false);
       expect(controller.right, isNull);
       expect(controller.error, contains('already open in the other pane'));
       controller.dispose();
     },
+    skip: Platform.isWindows
+        ? 'Hard-link setup here uses the POSIX ln command.'
+        : false,
   );
 
   test(
@@ -317,6 +335,7 @@ void main() {
       await right.writeAsBytes([2]);
       await Process.run('ln', [right.path, rightAlias]);
       final controller = CompareController();
+      closeWhenDone(controller);
       await controller.open(left.path, true);
       await controller.open(right.path, false);
       controller.setEditing(true, true);
@@ -330,5 +349,8 @@ void main() {
       expect(controller.dirty(true), isTrue);
       controller.dispose();
     },
+    skip: Platform.isWindows
+        ? 'Hard-link setup here uses the POSIX ln command.'
+        : false,
   );
 }

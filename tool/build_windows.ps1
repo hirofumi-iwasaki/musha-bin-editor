@@ -7,11 +7,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectDir = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$host = $env:PROCESSOR_ARCHITECTURE.ToLowerInvariant()
-$nativeArchitecture = if ($host -eq 'arm64') { 'arm64' } elseif ($host -eq 'amd64') { 'x64' } else { throw "Unsupported Windows host architecture: $host" }
+$processorArchitecture = $env:PROCESSOR_ARCHITECTURE.ToLowerInvariant()
+$nativeArchitecture = if ($processorArchitecture -eq 'arm64') { 'arm64' } elseif ($processorArchitecture -eq 'amd64') { 'x64' } else { throw "Unsupported Windows host architecture: $processorArchitecture" }
 if (-not $Architecture) { $Architecture = $nativeArchitecture }
 if ($Architecture -ne $nativeArchitecture) { throw "Native Windows host required (host=$nativeArchitecture target=$Architecture)." }
 if (-not $FlutterBin) { $FlutterBin = if (Test-Path (Join-Path $projectDir '.tooling\flutter\bin\flutter.bat')) { Join-Path $projectDir '.tooling\flutter\bin\flutter.bat' } else { 'flutter' } }
+$flutterCommand = if ([IO.Path]::IsPathRooted($FlutterBin)) { (Resolve-Path $FlutterBin).Path } else { (Get-Command $FlutterBin -ErrorAction Stop).Source }
+$dartBin = Join-Path (Split-Path -Parent $flutterCommand) 'dart.bat'
+if (-not (Test-Path $dartBin)) { throw "Missing Dart SDK beside Flutter: $dartBin" }
 
 Set-Location $projectDir
 & $FlutterBin pub get
@@ -37,7 +40,7 @@ New-Item -ItemType Directory -Path $stage | Out-Null
 try {
   $packageRoot = Join-Path $stage 'mushagaeshi_binary_editor'
   Copy-Item -Recurse -Path $bundle -Destination $packageRoot
-  & dart run tool/ci/write_distribution_metadata.dart $packageRoot "windows-$Architecture" $FlutterBin
+  & $dartBin run tool/ci/write_distribution_metadata.dart $packageRoot "windows-$Architecture" $FlutterBin
   if ($LASTEXITCODE -ne 0) { throw 'Distribution metadata generation failed.' }
   $archive = Join-Path $dist "musha-bin-edit-windows-$Architecture.zip"
   Remove-Item -Force -ErrorAction SilentlyContinue $archive
