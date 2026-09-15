@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Mushagaeshi Binary Editor
+Comment=Compare binary files in hexadecimal
+Exec=mushagaeshi_binary_editor
+Icon=com.example.mushagaeshi_binary_editor
+Terminal=false
+Categories=Development;Utility;
+StartupWMClass=com.example.mushagaeshi_binary_editor
