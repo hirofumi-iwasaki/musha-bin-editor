@@ -280,7 +280,7 @@ static void my_application_activate(GApplication* application) {
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
   self->save_channel = fl_method_channel_new(
-      fl_plugin_registry_get_messenger(FL_PLUGIN_REGISTRY(view)),
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)),
       "mushagaeshi/files",
       FL_METHOD_CODEC(fl_standard_method_codec_new()));
   fl_method_channel_set_method_call_handler(self->save_channel,
