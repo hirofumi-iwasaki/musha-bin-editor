@@ -43,6 +43,8 @@ Future<void> sendNativeMethod(MethodCall call) async {
 }
 
 void main() {
+  // This exercises the macOS Runner method channel. Windows and Linux use
+  // desktop_drop and require native runtime acceptance for real drag events.
   testWidgets('native file drops open the side reported by macOS', (
     tester,
   ) async {
@@ -92,6 +94,7 @@ void main() {
         'y': leftPoint.dy,
       }),
     );
+    await tester.pump();
     expect(controller.openedPath, '/tmp/left.bin');
     expect(controller.openedLeft, isTrue);
 
@@ -102,6 +105,7 @@ void main() {
         'y': rightPoint.dy,
       }),
     );
+    await tester.pump();
     expect(controller.openedPath, '/tmp/right.bin');
     expect(controller.openedLeft, isFalse);
 
@@ -127,5 +131,5 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
     await tester.binding.setSurfaceSize(null);
-  });
+  }, skip: !Platform.isMacOS);
 }
