@@ -33,6 +33,7 @@ jobs:
       - name: Analyze and test shared Dart code
         shell: pwsh
         run: |
+          flutter pub get
           flutter analyze
           flutter test
       - name: Build, inspect, and package complete Windows bundle
@@ -66,11 +67,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Flutter Linux build prerequisites
-        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev
+        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
       - name: Bootstrap pinned native Flutter SDK
         run: bash tool/ci/bootstrap_flutter.sh ${{ matrix.architecture }} "$RUNNER_TEMP/flutter"
       - name: Analyze and test shared Dart code
         run: |
+          flutter pub get
           flutter analyze
           flutter test
       - name: Build, inspect, and package complete Linux bundle
@@ -90,6 +92,7 @@ jobs:
         run: bash tool/ci/bootstrap_flutter.sh arm64 "$RUNNER_TEMP/flutter"
       - name: Analyze and test shared Dart code
         run: |
+          flutter pub get
           flutter analyze
           flutter test
       - name: Build, inspect, and package complete macOS bundle
