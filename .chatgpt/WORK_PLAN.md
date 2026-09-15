@@ -220,3 +220,12 @@
 - CI results establish native compilation/testing/packaging on the planned Ubuntu baselines. They do not establish all GUI or native save-failure scenarios.
 - Trigger: release/0.4.0 pushes, pull requests, workflow_dispatch (UI availability after default-branch merge). No GitHub Release publication performed; development version unchanged.
 - Next: record remaining manual acceptance and native failure cases, update release metadata when preparing v0.4.0, then publish upon request.
+
+
+### 2026-09-15 v0.5.0 update notification design
+
+- Created release/0.5.0 from synchronized main at 506bda6.
+- Added UPDATE_CHECK_DESIGN.md covering nonblocking GitHub release discovery, stable version comparison, OS/architecture asset links, caching and rate limits, silent failures, lifecycle and macOS network entitlement requirements.
+- Updated the project record index to point to the current design.
+- This is documentation only; no update code, dependency changes, builds or runtime tests were performed. Detailed policy defaults remain proposals.
+- Next: implement the documented service and status notification, then extend CI to the new branch and verify native behavior.

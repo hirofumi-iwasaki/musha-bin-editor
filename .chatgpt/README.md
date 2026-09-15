@@ -6,7 +6,9 @@ This directory is the canonical record of design decisions, implementation plans
 
 ## Current work
 
-Start with [v0.4.0 continuation plan](RELEASE_0.4.0_PLAN.md), then [Windows/Linux design](CROSS_PLATFORM_DESIGN.md). The working branch is `release/0.4.0`; implementation is pending.
+Start with [update check design](UPDATE_CHECK_DESIGN.md). The working branch is `release/0.5.0`, created from main at `506bda6`. The current task is design only; update-check implementation has not started.
+
+The [v0.4.0 continuation plan](RELEASE_0.4.0_PLAN.md) and [Windows/Linux design](CROSS_PLATFORM_DESIGN.md) remain historical references.
 
 ## Documents
 
@@ -29,4 +31,4 @@ Earlier design documents retain their original Japanese text as historical recor
 - Do not store credentials, private keys or non-public device dumps here.
 - Recheck official platform and dependency support information when adopting or upgrading tools.
 
-v0.3.0 includes comparison, editing/saving and hashes and has been merged into main. Current work is the Windows and Ubuntu port for v0.4.0. macOS 15 hardware validation remains outstanding.
+v0.4.0 has been released and merged into main. Current work is startup update notification design for v0.5.0. Native CI compilation does not replace remaining hardware/GUI acceptance checks.
