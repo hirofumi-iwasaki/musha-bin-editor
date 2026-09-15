@@ -1,0 +1,108 @@
+name: Desktop build and package
+
+on:
+  pull_request:
+  push:
+    branches: [release/0.4.0]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.47.4
+  FLUTTER_REVISION: 9584c6713b324636289d067944a46fd6b49df14b
+
+jobs:
+  windows:
+    name: Windows ${{ matrix.architecture }} compile and package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            architecture: x64
+          - runner: windows-11-arm
+            architecture: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap pinned native Flutter SDK
+        shell: pwsh
+        run: tool/ci/bootstrap_flutter.ps1 -Architecture ${{ matrix.architecture }} -FlutterRoot "$env:RUNNER_TEMP/flutter"
+      - name: Analyze and test shared Dart code
+        shell: pwsh
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Build, inspect, and package complete Windows bundle
+        shell: pwsh
+        run: tool/build_windows.ps1 -Architecture ${{ matrix.architecture }} -FlutterBin "$env:RUNNER_TEMP/flutter/bin/flutter.bat"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: musha-bin-edit-windows-${{ matrix.architecture }}
+          path: dist/musha-bin-edit-windows-${{ matrix.architecture }}.zip
+          if-no-files-found: error
+
+  linux:
+    name: Ubuntu ${{ matrix.ubuntu }} ${{ matrix.architecture }} compile and package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ubuntu: 22.04
+            runner: ubuntu-22.04
+            architecture: x64
+          - ubuntu: 24.04
+            runner: ubuntu-24.04
+            architecture: x64
+          - ubuntu: 22.04
+            runner: ubuntu-22.04-arm
+            architecture: arm64
+          - ubuntu: 24.04
+            runner: ubuntu-24.04-arm
+            architecture: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Flutter Linux build prerequisites
+        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+      - name: Bootstrap pinned native Flutter SDK
+        run: bash tool/ci/bootstrap_flutter.sh ${{ matrix.architecture }} "$RUNNER_TEMP/flutter"
+      - name: Analyze and test shared Dart code
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Build, inspect, and package complete Linux bundle
+        run: FLUTTER_BIN="$RUNNER_TEMP/flutter/bin/flutter" bash tool/build_linux.sh ${{ matrix.architecture }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: musha-bin-edit-linux-${{ matrix.ubuntu }}-${{ matrix.architecture }}
+          path: dist/musha-bin-edit-linux-${{ matrix.architecture }}.tar.gz
+          if-no-files-found: error
+
+  macos:
+    name: macOS Arm64 compile and package
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap pinned native Flutter SDK
+        run: bash tool/ci/bootstrap_flutter.sh arm64 "$RUNNER_TEMP/flutter"
+      - name: Analyze and test shared Dart code
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Build, inspect, and package complete macOS bundle
+        run: FLUTTER_BIN="$RUNNER_TEMP/flutter/bin/flutter" bash tool/package_macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: musha-bin-edit-macos
+          path: dist/musha-bin-edit-macos.zip
+          if-no-files-found: error
+
+# These jobs establish native compilation and inspect complete runtime bundles.
+# They do not treat a headless CI build as desktop GUI acceptance. Open/drop/
+# save/close behavior requires a separate clean-system runtime acceptance pass.

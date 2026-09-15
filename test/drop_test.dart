@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,7 +24,7 @@ class DropRecordingController extends CompareController {
   }
 
   @override
-  Future<void> refresh() async {
+  Future<void> refresh({bool allowDuringSave = false}) async {
     loading = false;
     leftBytes = Uint8List((visibleRows + 1) * bytesPerRow);
     rightBytes = Uint8List(leftBytes.length);
@@ -41,6 +43,8 @@ Future<void> sendNativeMethod(MethodCall call) async {
 }
 
 void main() {
+  // This exercises the macOS Runner method channel. Windows and Linux use
+  // desktop_drop and require native runtime acceptance for real drag events.
   testWidgets('native file drops open the side reported by macOS', (
     tester,
   ) async {
@@ -65,19 +69,23 @@ void main() {
       ),
     );
 
-    await sendNativeMethod(
-      MethodCall('fileDragUpdated', {'x': leftPoint.dx, 'y': leftPoint.dy}),
-    );
-    await tester.pump();
-    final highlighted = tester.widgetList<AnimatedContainer>(
-      find.byType(AnimatedContainer),
-    );
-    expect(
-      highlighted.where(
-        (widget) => (widget.decoration as BoxDecoration).color != null,
-      ),
-      hasLength(1),
-    );
+    if (Platform.isMacOS) {
+      // Only macOS supplies hover coordinates through the native channel.
+      // Windows/Linux render hover feedback through desktop_drop instead.
+      await sendNativeMethod(
+        MethodCall('fileDragUpdated', {'x': leftPoint.dx, 'y': leftPoint.dy}),
+      );
+      await tester.pump();
+      final highlighted = tester.widgetList<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+      expect(
+        highlighted.where(
+          (widget) => (widget.decoration as BoxDecoration).color != null,
+        ),
+        hasLength(1),
+      );
+    }
 
     await sendNativeMethod(
       MethodCall('fileDropped', {
@@ -86,6 +94,7 @@ void main() {
         'y': leftPoint.dy,
       }),
     );
+    await tester.pump();
     expect(controller.openedPath, '/tmp/left.bin');
     expect(controller.openedLeft, isTrue);
 
@@ -96,6 +105,7 @@ void main() {
         'y': rightPoint.dy,
       }),
     );
+    await tester.pump();
     expect(controller.openedPath, '/tmp/right.bin');
     expect(controller.openedLeft, isFalse);
 
@@ -121,5 +131,5 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
     await tester.binding.setSurfaceSize(null);
-  });
+  }, skip: !Platform.isMacOS);
 }

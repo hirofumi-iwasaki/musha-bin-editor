@@ -9,16 +9,24 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:path/path.dart' as path;
 
 import 'application/compare_controller.dart';
 import 'infrastructure/file_hash.dart';
 import 'infrastructure/safe_save.dart';
 import 'presentation/hex_pane.dart';
+import 'platform/desktop_platform.dart';
 
-void main() => runApp(const MushagaeshiBinaryEditorApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final desktop = createDesktopPlatform();
+  runApp(MushagaeshiBinaryEditorApp(desktop: desktop));
+}
 
 class MushagaeshiBinaryEditorApp extends StatelessWidget {
-  const MushagaeshiBinaryEditorApp({super.key});
+  const MushagaeshiBinaryEditorApp({super.key, this.desktop});
+  final DesktopPlatform? desktop;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Mushagaeshi Binary Editor',
@@ -38,13 +46,14 @@ class MushagaeshiBinaryEditorApp extends StatelessWidget {
       useMaterial3: true,
       scaffoldBackgroundColor: const Color(0xFF191E26),
     ),
-    home: const CompareWindow(),
+    home: CompareWindow(desktop: desktop),
   );
 }
 
 class CompareWindow extends StatefulWidget {
-  const CompareWindow({super.key, this.controller});
+  const CompareWindow({super.key, this.controller, this.desktop});
   final CompareController? controller;
+  final DesktopPlatform? desktop;
   @override
   State<CompareWindow> createState() => _CompareWindowState();
 }
@@ -56,18 +65,56 @@ class _CompareWindowState extends State<CompareWindow> {
   final leftPaneKey = GlobalKey();
   final rightPaneKey = GlobalKey();
   final verticalScroll = ScrollController();
-  static const platform = MethodChannel('mushagaeshi/files');
+  late final DesktopPlatform desktop =
+      widget.desktop ?? createDesktopPlatform();
   bool picking = false;
   bool? hoveredDropLeft;
+  late final Future<void> _desktopReady;
+  Object? _desktopInitializationError;
+  var _desktopInitialized = false;
+
+  double get _rowHeight => HexMetrics.measure(context).rowHeight;
+  double get _hexHeaderHeight => HexMetrics.measure(context).headerHeight;
+  double get _paneHeaderHeight =>
+      math.max(62, 62 * MediaQuery.textScalerOf(context).scale(13) / 13);
 
   @override
   void initState() {
     super.initState();
     verticalScroll.addListener(_scrollChanged);
-    platform.setMethodCallHandler(_handlePlatformCall);
+    desktop.setEventHandler(_handleDesktopEvent);
+    _desktopReady = _initializeDesktop();
     if (const bool.fromEnvironment('BENCHMARK')) {
       unawaited(benchmark());
     }
+  }
+
+  Future<void> _initializeDesktop() async {
+    try {
+      await desktop.initialize();
+      _desktopInitialized = true;
+      if (mounted) setState(() {});
+    } catch (error, stackTrace) {
+      _desktopInitializationError = error;
+      debugPrint('Unable to initialize desktop integration: $error\n$stackTrace');
+      if (mounted) {
+        controller.reportError('Unable to initialize desktop integration: $error');
+        setState(() {});
+      }
+    }
+  }
+
+  Future<bool> _waitForDesktopReady() async {
+    await _desktopReady;
+    if (!_desktopInitialized || _desktopInitializationError != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Desktop integration is not available.')),
+        );
+      }
+      return false;
+    }
+    return mounted;
   }
 
   Future<void> benchmark() async {
@@ -99,7 +146,7 @@ class _CompareWindowState extends State<CompareWindow> {
 
   @override
   void dispose() {
-    platform.setMethodCallHandler(null);
+    unawaited(_desktopReady.whenComplete(desktop.dispose));
     verticalScroll
       ..removeListener(_scrollChanged)
       ..dispose();
@@ -111,59 +158,46 @@ class _CompareWindowState extends State<CompareWindow> {
 
   void _scrollChanged() {
     if (!verticalScroll.hasClients) return;
-    controller.scrollTo((verticalScroll.offset / hexRowHeight).floor());
+    controller.scrollTo((verticalScroll.offset / _rowHeight).floor());
   }
 
-  Future<void> _handlePlatformCall(MethodCall call) async {
+  Future<void> _handleDesktopEvent(DesktopEvent event) async {
     if (!mounted) return;
-    if (call.method == 'fileDropped') {
-      final arguments = call.arguments;
-      if (arguments is! Map ||
-          arguments['path'] is! String ||
-          arguments['x'] is! num ||
-          arguments['y'] is! num) {
-        controller.reportError('Unable to open the dropped file.');
-        return;
-      }
-      final side = _dropSideAt(
-        Offset(
-          (arguments['x'] as num).toDouble(),
-          (arguments['y'] as num).toDouble(),
-        ),
-      );
+    if (event is DesktopFileDropped) {
+      final side = event.pane == DesktopPane.left
+          ? true
+          : event.pane == DesktopPane.right
+          ? false
+          : event.position == null
+          ? null
+          : _dropSideAt(Offset(event.position!.x, event.position!.y));
       if (side == null) {
         controller.reportError(
           'Drop the file on the left or right binary pane.',
         );
       } else {
         if (await _confirmReplace(side)) {
-          await controller.open(arguments['path'] as String, side);
+          await controller.open(event.path, side);
         }
       }
       if (mounted) setState(() => hoveredDropLeft = null);
-    } else if (call.method == 'fileDragUpdated') {
-      final arguments = call.arguments;
-      if (arguments is Map && arguments['x'] is num && arguments['y'] is num) {
-        final side = _dropSideAt(
-          Offset(
-            (arguments['x'] as num).toDouble(),
-            (arguments['y'] as num).toDouble(),
-          ),
-        );
-        if (side != hoveredDropLeft) setState(() => hoveredDropLeft = side);
-      }
-    } else if (call.method == 'fileDragExited') {
+    } else if (event is DesktopDropHoverChanged) {
+      final side = event.pane == DesktopPane.left
+          ? true
+          : event.pane == DesktopPane.right
+          ? false
+          : event.position == null
+          ? null
+          : _dropSideAt(Offset(event.position!.x, event.position!.y));
+      if (side != hoveredDropLeft) setState(() => hoveredDropLeft = side);
+    } else if (event is DesktopDropExited) {
       if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
-    } else if (call.method == 'fileDropError') {
-      final arguments = call.arguments;
-      final message = arguments is Map ? arguments['message'] : null;
-      controller.reportError(
-        message is String ? message : 'Unable to open the dropped file.',
-      );
+    } else if (event is DesktopDropError) {
+      controller.reportError(event.message);
       if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
-    } else if (call.method == 'requestClose') {
+    } else if (event is DesktopCloseRequested) {
       if (await _confirmBothDirty()) {
-        await platform.invokeMethod<void>('confirmClose');
+        await desktop.confirmClose();
       }
     }
   }
@@ -214,13 +248,16 @@ class _CompareWindowState extends State<CompareWindow> {
 
   Future<void> open(bool left) async {
     if (picking) return;
+    if (!await _waitForDesktopReady()) return;
     if (!await _confirmReplace(left)) return;
     setState(() => picking = true);
     try {
-      final path = await platform.invokeMethod<String>('openFile', {
-        'side': left ? 'Left' : 'Right',
-      });
-      if (path != null && mounted) await controller.open(path, left);
+      final selectedPath = await desktop.openFile(
+        left ? DesktopPane.left : DesktopPane.right,
+      );
+      if (selectedPath != null && mounted) {
+        await controller.open(selectedPath, left);
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -233,19 +270,21 @@ class _CompareWindowState extends State<CompareWindow> {
   }
 
   Future<bool> save(bool left, {required bool saveAs}) async {
+    if (!await _waitForDesktopReady()) return false;
     var destination = controller.path(left);
     if (destination == null) return false;
     if (saveAs) {
-      destination = await platform.invokeMethod<String>('saveFile', {
-        'side': left ? 'Left' : 'Right',
-        'name': destination.split('/').last,
-      });
+      destination = await desktop.saveFile(
+        left ? DesktopPane.left : DesktopPane.right,
+        path.basename(destination),
+      );
       if (destination == null) return false;
     }
     var result = await controller.save(
       left,
       destination,
       install: _installSavedFile,
+      stagingDirectory: desktop.stagingDirectory,
     );
     if (result.outcome == SaveOutcome.externallyChanged && mounted) {
       final overwrite = await showDialog<bool>(
@@ -274,8 +313,18 @@ class _CompareWindowState extends State<CompareWindow> {
           destination,
           allowExternalChange: true,
           install: _installSavedFile,
+          stagingDirectory: desktop.stagingDirectory,
         );
       }
+    }
+    if (result.outcome == SaveOutcome.destinationChanged && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The destination changed outside the app. Choose Save As again.',
+          ),
+        ),
+      );
     }
     if (result.outcome == SaveOutcome.failed && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -285,15 +334,10 @@ class _CompareWindowState extends State<CompareWindow> {
     return result.outcome == SaveOutcome.saved;
   }
 
-  Future<void> _installSavedFile(
+  Future<SaveInstallResult> _installSavedFile(
     String stagedPath,
     String destinationPath,
-  ) async {
-    await platform.invokeMethod<void>('installSavedFile', {
-      'stagedPath': stagedPath,
-      'destinationPath': destinationPath,
-    });
-  }
+  ) => desktop.installSavedFile(stagedPath, destinationPath);
 
   Future<void> goTo() async {
     final input = TextEditingController();
@@ -352,8 +396,8 @@ class _CompareWindowState extends State<CompareWindow> {
 
   void _syncScrollPosition() {
     if (!verticalScroll.hasClients) return;
-    final desired = controller.topRow * hexRowHeight;
-    final currentRow = (verticalScroll.offset / hexRowHeight).floor();
+    final desired = controller.topRow * _rowHeight;
+    final currentRow = (verticalScroll.offset / _rowHeight).floor();
     if (currentRow != controller.topRow) {
       verticalScroll.jumpTo(
         desired.clamp(0, verticalScroll.position.maxScrollExtent),
@@ -434,6 +478,7 @@ class _CompareWindowState extends State<CompareWindow> {
 
   Widget pane(bool left) {
     final file = left ? controller.left : controller.right;
+    final headerHeight = _paneHeaderHeight;
     return Expanded(
       child: AnimatedContainer(
         key: left ? leftPaneKey : rightPaneKey,
@@ -450,120 +495,134 @@ class _CompareWindowState extends State<CompareWindow> {
                 )
               : null,
         ),
-        child: Semantics(
-          container: true,
-          label:
-              '${left ? 'Left' : 'Right'} file drop target. Drop one binary file to open it on the ${left ? 'left' : 'right'}.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: desktop.usesWidgetDropTargets
+            ? DropTarget(
+                onDragDone: (detail) => desktop.reportDropFiles(
+                  detail.files.map((file) => file.path).toList(),
+                  left ? DesktopPane.left : DesktopPane.right,
+                ),
+                onDragEntered: (_) => desktop.reportDropHover(
+                  left ? DesktopPane.left : DesktopPane.right,
+                  true,
+                ),
+                onDragExited: (_) => desktop.reportDropHover(
+                  left ? DesktopPane.left : DesktopPane.right,
+                  false,
+                ),
+                child: _paneContents(left, file, headerHeight),
+              )
+            : _paneContents(left, file, headerHeight),
+      ),
+    );
+  }
+
+  Widget _paneContents(
+    bool left,
+    dynamic file,
+    double headerHeight,
+  ) => Semantics(
+    container: true,
+    label:
+        '${left ? 'Left' : 'Right'} file drop target. Drop one binary file to open it on the ${left ? 'left' : 'right'}.',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          height: headerHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
+              ),
+            ),
+          ),
+          child: Row(
             children: [
-              Container(
-                height: 62,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(context).dividerColor
-                          .withValues(alpha: 0.15),
-                    ),
-                  ),
-                ),
-                child: Row(
+              Icon(
+                left ? Icons.file_present_outlined : Icons.compare_outlined,
+                size: 21,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      left
-                          ? Icons.file_present_outlined
-                          : Icons.compare_outlined,
-                      size: 21,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : '${file.path.split('/').last}${controller.dirty(left) ? ' *' : ''}'}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Tooltip(
-                            message: file?.path ?? '',
-                            child: Text(
-                              file == null
-                                  ? 'Choose Open ${left ? 'Left' : 'Right'}'
-                                  : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: controller.editing(left),
-                      onChanged: file == null
-                          ? null
-                          : (value) => controller.setEditing(left, value),
-                    ),
                     Text(
-                      controller.editing(left) ? 'Edit ON' : 'Edit OFF',
-                      style: const TextStyle(fontSize: 11),
+                      '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : '${path.basename(file.path)}${controller.dirty(left) ? ' *' : ''}'}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    IconButton(
-                      tooltip: 'Save ${left ? 'Left' : 'Right'}',
-                      onPressed: controller.dirty(left)
-                          ? () => save(left, saveAs: false)
-                          : null,
-                      icon: const Icon(Icons.save_outlined, size: 18),
-                    ),
-                    IconButton(
-                      tooltip: 'Save ${left ? 'Left' : 'Right'} As',
-                      onPressed: file == null
-                          ? null
-                          : () => save(left, saveAs: true),
-                      icon: const Icon(Icons.save_as_outlined, size: 18),
+                    Tooltip(
+                      message: file?.path ?? '',
+                      child: Text(
+                        file == null
+                            ? 'Choose Open ${left ? 'Left' : 'Right'}'
+                            : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Expanded(
-                child: HexPane(
-                  bytes: left ? controller.leftBytes : controller.rightBytes,
-                  other: left ? controller.rightBytes : controller.leftBytes,
-                  offset: controller.offset,
-                  size: file?.stamp.size ?? 0,
-                  totalSize: controller.length,
-                  columns: controller.bytesPerRow,
-                  isLeft: left,
-                  hasFile: file != null,
-                  hasOther: (left ? controller.right : controller.left) != null,
-                  loading: controller.loading,
-                  invalid: controller.invalid,
-                  selected: controller.selectedLeft == left
-                      ? controller.selected
-                      : null,
-                  edited: Set.unmodifiable(
-                    left
-                        ? controller.leftEdits.keys
-                        : controller.rightEdits.keys,
-                  ),
-                  editing: controller.editing(left),
-                  onSelect: (at) => controller.select(at, left),
-                  onVerticalPointerScroll: _pointerScroll,
-                  focusNode: left ? leftFocus : rightFocus,
-                ),
+              Switch(
+                value: controller.editing(left),
+                onChanged: file == null
+                    ? null
+                    : (value) => controller.setEditing(left, value),
+              ),
+              Text(
+                controller.editing(left) ? 'Edit ON' : 'Edit OFF',
+                style: const TextStyle(fontSize: 11),
+              ),
+              IconButton(
+                tooltip: 'Save ${left ? 'Left' : 'Right'}',
+                onPressed: _desktopInitialized && controller.dirty(left)
+                    ? () => save(left, saveAs: false)
+                    : null,
+                icon: const Icon(Icons.save_outlined, size: 18),
+              ),
+              IconButton(
+                tooltip: 'Save ${left ? 'Left' : 'Right'} As',
+                onPressed: file == null || !_desktopInitialized
+                    ? null
+                    : () => save(left, saveAs: true),
+                icon: const Icon(Icons.save_as_outlined, size: 18),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
+        Expanded(
+          child: HexPane(
+            bytes: left ? controller.leftBytes : controller.rightBytes,
+            other: left ? controller.rightBytes : controller.leftBytes,
+            offset: controller.offset,
+            size: file?.stamp.size ?? 0,
+            totalSize: controller.length,
+            columns: controller.bytesPerRow,
+            isLeft: left,
+            hasFile: file != null,
+            hasOther: (left ? controller.right : controller.left) != null,
+            loading: controller.loading,
+            invalid: controller.invalid,
+            selected: controller.selectedLeft == left
+                ? controller.selected
+                : null,
+            edited: Set.unmodifiable(
+              left ? controller.leftEdits.keys : controller.rightEdits.keys,
+            ),
+            editing: controller.editing(left),
+            onSelect: (at) => controller.select(at, left),
+            onVerticalPointerScroll: _pointerScroll,
+            focusNode: left ? leftFocus : rightFocus,
+          ),
+        ),
+      ],
+    ),
+  );
 
   Widget hashValue(bool left) {
     final file = left ? controller.left : controller.right;
@@ -583,7 +642,7 @@ class _CompareWindowState extends State<CompareWindow> {
             children: [
               Text(
                 '${left ? 'Left' : 'Right'}: ',
-                style: const TextStyle(fontFamily: 'Menlo', fontSize: 11),
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
               ),
               Flexible(
                 child: Container(
@@ -602,7 +661,7 @@ class _CompareWindowState extends State<CompareWindow> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontFamily: 'Menlo',
+                      fontFamily: 'monospace',
                       fontSize: value == null ? 11 : 13,
                     ),
                   ),
@@ -620,15 +679,24 @@ class _CompareWindowState extends State<CompareWindow> {
     listenable: controller,
     builder: (context, _) => CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyO, meta: true): () =>
-            open(true),
-        const SingleActivator(
+        SingleActivator(
           LogicalKeyboardKey.keyO,
-          meta: true,
+          meta: !desktop.usesWidgetDropTargets,
+          control: desktop.usesWidgetDropTargets,
+        ): () =>
+            open(true),
+        SingleActivator(
+          LogicalKeyboardKey.keyO,
+          meta: !desktop.usesWidgetDropTargets,
+          control: desktop.usesWidgetDropTargets,
           shift: true,
         ): () =>
             open(false),
-        const SingleActivator(LogicalKeyboardKey.keyG, meta: true): () {
+        SingleActivator(
+          LogicalKeyboardKey.keyG,
+          meta: !desktop.usesWidgetDropTargets,
+          control: desktop.usesWidgetDropTargets,
+        ): () {
           if (controller.length > 0) unawaited(goTo());
         },
       },
@@ -646,12 +714,16 @@ class _CompareWindowState extends State<CompareWindow> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       FilledButton.tonalIcon(
-                        onPressed: picking ? null : () => open(true),
+                        onPressed: picking || !_desktopInitialized
+                            ? null
+                            : () => open(true),
                         icon: const Icon(Icons.folder_open, size: 18),
                         label: const Text('Open Left'),
                       ),
                       FilledButton.tonalIcon(
-                        onPressed: picking ? null : () => open(false),
+                        onPressed: picking || !_desktopInitialized
+                            ? null
+                            : () => open(false),
                         icon: const Icon(Icons.folder_open, size: 18),
                         label: const Text('Open Right'),
                       ),
@@ -723,8 +795,10 @@ class _CompareWindowState extends State<CompareWindow> {
                     builder: (context, bounds) {
                       final rows = math.max(
                         1,
-                        ((bounds.maxHeight - 62 - hexHeaderHeight) /
-                                hexRowHeight)
+                        ((bounds.maxHeight -
+                                    _paneHeaderHeight -
+                                    _hexHeaderHeight) /
+                                _rowHeight)
                             .floor(),
                       );
                       if (rows != controller.visibleRows) {
@@ -761,7 +835,7 @@ class _CompareWindowState extends State<CompareWindow> {
                             ),
                             SliverToBoxAdapter(
                               child: SizedBox(
-                                height: controller.maxTop * hexRowHeight,
+                                height: controller.maxTop * _rowHeight,
                               ),
                             ),
                           ],

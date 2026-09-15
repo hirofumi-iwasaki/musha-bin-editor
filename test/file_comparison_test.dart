@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
@@ -42,7 +43,13 @@ void main() {
       bytes[scanBlockSize] = 1;
       await b.writeAsBytes(bytes);
       final port = ReceivePort();
-      final future = port.firstWhere((m) => (m as Map)['type'] != 'progress');
+      final done = Completer<Map>();
+      final closed = Completer<void>();
+      final subscription = port.listen((dynamic message) {
+        final result = message as Map;
+        if (result['type'] == 'done') done.complete(result);
+        if (result['type'] == 'closed') closed.complete();
+      });
       await compareWorker({
         'port': port.sendPort,
         'left': a.path,
@@ -50,26 +57,34 @@ void main() {
         'leftStamp': await FileStamp.read(a.path),
         'rightStamp': await FileStamp.read(b.path),
       });
-      final result = await future as Map;
+      final result = await done.future;
       expect(result['type'], 'done');
       expect(result['bytes'], 4);
       expect(result['runs'], 2);
+      await closed.future;
+      await subscription.cancel();
       port.close();
     },
   );
 
-  test('metadata-only changes do not invalidate an open file', () async {
-    final file = File('${directory.path}/metadata.bin');
-    await file.writeAsBytes([1, 2, 3, 4]);
-    final original = await FileStamp.read(file.path);
+  test(
+    'metadata-only changes do not invalidate an open file',
+    () async {
+      final file = File('${directory.path}/metadata.bin');
+      await file.writeAsBytes([1, 2, 3, 4]);
+      final original = await FileStamp.read(file.path);
 
-    await Future<void>.delayed(const Duration(milliseconds: 10));
-    await Process.run('chmod', ['400', file.path]);
-    final metadataChanged = await FileStamp.read(file.path);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      await Process.run('chmod', ['400', file.path]);
+      final metadataChanged = await FileStamp.read(file.path);
 
-    expect(metadataChanged.changed, isNot(original.changed));
-    expect(metadataChanged.modified, original.modified);
-    expect(metadataChanged.matches(original), isTrue);
-    expect(await PagedFile(file.path, original).read(0, 4), [1, 2, 3, 4]);
-  });
+      expect(metadataChanged.changed, isNot(original.changed));
+      expect(metadataChanged.modified, original.modified);
+      expect(metadataChanged.matches(original), isTrue);
+      expect(await PagedFile(file.path, original).read(0, 4), [1, 2, 3, 4]);
+    },
+    skip: Platform.isWindows
+        ? 'This metadata-only mutation uses the POSIX chmod command.'
+        : false,
+  );
 }

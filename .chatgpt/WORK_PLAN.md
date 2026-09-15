@@ -1,5 +1,15 @@
 # 作業計画と進捗
 
+## Current milestone: v0.4.0 (2026-09-15)
+
+- Working branch: `release/0.4.0`, created from merged main `0bd7646`.
+- Goal: Windows x64/Arm64 and Ubuntu-only x64/Arm64, preserving macOS.
+- Read [the continuation plan](RELEASE_0.4.0_PLAN.md) and [cross-platform design](CROSS_PLATFORM_DESIGN.md) before resuming.
+- Completed: design review, scope record, branch creation.
+- Validation: documentation consistency only; no platform implementation/build tests performed.
+- Next action: prove native toolchain/plugin feasibility and identify target test environments.
+- Earlier sections below are historical; the v0.4.0 plan defines current work.
+
 ## 0.3.0 hash display
 
 - Changed the empty-pane instruction to “Drag file here to open”.
@@ -172,3 +182,41 @@
 
 - Replaced the mistaken “Mushaaeshi” spelling with “Mushagaeshi” throughout repository source, package metadata, tests, scripts, documentation and macOS product settings.
 - Kept the existing correctly spelled bundle identifier for compatibility while standardizing the external product name as **Mushagaeshi Binary Editor**.
+
+
+### 2026-09-15 v0.4.0 implementation checkpoint (Terra delegation)
+
+- Parent task managed scope and integration; GPT-5.6 Terra agents implemented UI/platform portability, save transactions and native CI/backends.
+- Added Windows/Ubuntu runners and adapters using file_selector 1.1.0, desktop_drop 0.8.4, window_manager 0.5.2 and path 1.9.1. Existing macOS channel behavior remains.
+- Unified measured/scaled glyph geometry, hit testing, scroll calculations and highlights; fixed initialization lifecycle and preserved the macOS metadata entry.
+- Replaced unsafe copy fallback, froze edit snapshots, serialized saves through adoption, added worker handle-close acknowledgements, destination-change checks and recovery paths. Tests cover open/save races, source changes during Save As and ambiguous installation.
+- Added Windows ReplaceFileW/MoveFileExW and Ubuntu same-filesystem rename backends plus conservative metadata rejection. These native backends have not been executed on their target OS.
+- Added pinned native CI/bootstrap and complete-bundle packaging with architecture inspection, notices and source references. No CI run or release publication has occurred.
+- Integration checkpoint: flutter analyze clean; all 29 Flutter tests passed. macOS Release build and packaging succeeded (arm64, strict deep code signature valid, development version 0.3.0 build 3). The archive includes LICENSE, third-party notices/licenses and source/build metadata.
+- Remaining: native Windows/Ubuntu builds and GUI acceptance on x64/Arm64, OS save-failure validation, macOS regression acceptance and eventual release metadata/publishing.
+
+
+### 2026-09-15 Parallels native Arm64 builds
+
+- User provided running Windows 11 Arm64 and Ubuntu 26.04 LTS Arm64 VMs. Used Parallels Tools guest execution with dedicated VM workspaces, not shared host build directories.
+- Ubuntu: installed required Clang/CMake/Ninja/GTK development prerequisites; official Flutter 3.47.4 source checkout at 9584c671 with native aarch64 Dart 3.13.3. Workspace: /home/parallels/musha-build/project.
+- Windows: installed Git for Windows Arm64 and Visual Studio Build Tools 2022 17.14.40 with C++ Arm64 tooling, plus official pinned Flutter source bootstrap. VM dedicated workspace under C:\musha-build. No existing project files were overwritten.
+- Native compile fixes: Linux Flutter messenger API (b3abe05); Windows checked UTF string length conversion and PowerShell reserved variable/bundled Dart invocation (ba2b16c).
+- Cross-OS tests exposed asynchronous resource cleanup; added awaitable controller.close(), Windows basename handling and explicit OS-specific test scoping. Final test-only fix: 7c4dc3a.
+- Final source for both archives: 7c4dc3a1f4f246b5824408f02f005f59e2a1d215.
+- Windows: analyze clean; 25 tests passed / 4 POSIX/macOS-specific skips; native Release and package succeeded; all EXE/DLLs verified PE ARM64 (0xAA64).
+- Ubuntu 26.04: analyze clean; 28 tests passed / 1 macOS-specific skip; native Release and package succeeded; executable verified ELF aarch64.
+- Host artifacts: dist/musha-bin-edit-windows-arm64.zip (11,165,203 bytes, SHA-256 0c7e763bf2e5e57a01f3447e6ffa7cec25e00ab976d2ab6c9bb6e3d7143f0e29); dist/musha-bin-edit-linux-arm64.tar.gz (SHA-256 74157c5b60f08ce35906c1617315d8c31c3ec70715ea3e2b7d30de590ea9a3c2).
+- Both archives contain complete runtime bundles, LICENSE, dependency notices/licenses and exact source/build metadata. Version remains 0.3.0 build 3 during development.
+- Unverified: x64 builds, Ubuntu 22.04/24.04 compatibility, GUI launch/drop/save/close acceptance and native save-failure behavior. No push or release publication. Ubuntu 26.04 build is not a substitute for builds against the oldest supported baseline.
+
+
+### 2026-09-15 GitHub Actions native matrix verified
+
+- User reported normal manual operation of the supplied VM builds and requested Actions Arm64/x64 builds.
+- Updated the workflow for clean-runner pub get and Linux liblzma-dev, committed/pushed as 9d15351 on release/0.4.0.
+- Successful run: https://github.com/hirofumi-iwasaki/musha-bin-editor/actions/runs/34933106095. All seven jobs passed: Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64, macOS Arm64.
+- Every job completed native SDK bootstrap, analysis/tests, Release build, package architecture checks and artifact upload. Seven non-expired artifacts confirmed via API.
+- CI results establish native compilation/testing/packaging on the planned Ubuntu baselines. They do not establish all GUI or native save-failure scenarios.
+- Trigger: release/0.4.0 pushes, pull requests, workflow_dispatch (UI availability after default-branch merge). No GitHub Release publication performed; development version unchanged.
+- Next: record remaining manual acceptance and native failure cases, update release metadata when preparing v0.4.0, then publish upon request.

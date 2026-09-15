@@ -49,9 +49,14 @@ Future<Uint8List> readExactRange(
 }
 
 /// Worker owns its handles. Only progress/counts cross the isolate boundary.
-/// Cancellation kills the worker; normal completion closes all handles.
+/// Cancellation is cooperative and the final `closed` message is sent after
+/// both handles have been closed.
 Future<void> compareWorker(Map<String, Object> request) async {
   final port = request['port'] as SendPort;
+  final control = ReceivePort();
+  var canceled = false;
+  control.listen((_) => canceled = true);
+  port.send({'type': 'ready', 'control': control.sendPort});
   RandomAccessFile? left;
   RandomAccessFile? right;
   try {
@@ -79,7 +84,11 @@ Future<void> compareWorker(Map<String, Object> request) async {
         : RunNavigator(cursor, request['forward'] as bool);
     final watch = Stopwatch()..start();
     var lastProgress = 0;
-    for (var offset = 0; offset < length; offset += scanBlockSize) {
+    for (
+      var offset = 0;
+      offset < length && !canceled;
+      offset += scanBlockSize
+    ) {
       final a = await readExactRange(left, ls.size, offset, scanBlockSize);
       final b = await readExactRange(right, rs.size, offset, scanBlockSize);
       for (final entry in leftEdits.entries) {
@@ -114,6 +123,10 @@ Future<void> compareWorker(Map<String, Object> request) async {
         });
       }
     }
+    if (canceled) {
+      port.send({'type': 'canceled'});
+      return;
+    }
     if (navigator != null && !navigator.done) navigator.finish(length);
     if (!ls.matches(await FileStamp.read(lp)) ||
         !rs.matches(await FileStamp.read(rp))) {
@@ -134,6 +147,8 @@ Future<void> compareWorker(Map<String, Object> request) async {
   } finally {
     await left?.close();
     await right?.close();
+    control.close();
+    port.send({'type': 'closed'});
   }
 }
 

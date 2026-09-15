@@ -100,9 +100,10 @@ void main() {
       await idle(c);
       expect(c.diffBytes, 4096);
       final pending = c.compare();
-      c.stop();
+      // Stop can race the worker's `ready` message. Awaiting it proves that
+      // cancellation waited for the worker's handle-closing acknowledgement.
+      await c.stop();
       await pending;
-      await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(c.busy, false);
       expect(c.complete, false);
       await a.writeAsBytes([0]);

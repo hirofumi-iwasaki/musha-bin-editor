@@ -10,26 +10,73 @@ import '../core/comparison.dart';
 const hexRowHeight = 25.0;
 const hexHeaderHeight = 30.0;
 
+class HexMetrics {
+  const HexMetrics(
+    this.glyphWidth,
+    this.glyphHeight,
+    this.rowHeight,
+    this.headerHeight,
+    this.textScaler,
+    this.unitScale,
+  );
+
+  factory HexMetrics.measure(BuildContext context) {
+    final painter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      text: const TextSpan(
+        text: '0',
+        style: TextStyle(fontFamily: 'monospace', fontSize: 13),
+      ),
+    )..layout();
+    final textScaler = MediaQuery.textScalerOf(context);
+    final unitScale = textScaler.scale(13) / 13;
+    return HexMetrics(
+      painter.width,
+      painter.height,
+      math.max(
+        hexRowHeight * unitScale,
+        painter.height + 8 * unitScale,
+      ),
+      hexHeaderHeight * unitScale,
+      textScaler,
+      unitScale,
+    );
+  }
+
+  final double glyphWidth;
+  final double glyphHeight;
+  final double rowHeight;
+  final double headerHeight;
+  final TextScaler textScaler;
+  final double unitScale;
+  double get hexCell => glyphWidth * 2 + 6 * unitScale;
+}
+
 Color modifiedDifferenceBackground(Brightness brightness) =>
     brightness == Brightness.dark
     ? const Color(0xFF743C48)
     : const Color(0xFFFFD9DD);
 
 class HexLayout {
-  HexLayout(this.columns, this.digits, this.width);
+  HexLayout(this.columns, this.digits, this.width, this.metrics);
   final int columns;
   final int digits;
   final double width;
-  double get hexStart => 18 + digits * 8.0 + 20;
-  double get cell => 22;
-  double x(int col) => hexStart + col * cell + (col ~/ 8) * 9;
-  double get asciiStart => x(columns) + 12;
-  double get requiredWidth => asciiStart + columns * 8 + 16;
+  final HexMetrics metrics;
+  double get hexStart =>
+      18 * metrics.unitScale + digits * metrics.glyphWidth + 20 * metrics.unitScale;
+  double get cell => metrics.hexCell;
+  double x(int col) =>
+      hexStart + col * cell + (col ~/ 8) * 9 * metrics.unitScale;
+  double get asciiStart => x(columns) + 12 * metrics.unitScale;
+  double get requiredWidth =>
+      asciiStart + columns * metrics.glyphWidth + 16 * metrics.unitScale;
   int? column(double xPosition) {
     for (var i = 0; i < columns; i++) {
       if (xPosition >= x(i) && xPosition < x(i) + cell) return i;
-      if (xPosition >= asciiStart + i * 8 &&
-          xPosition < asciiStart + (i + 1) * 8) {
+      if (xPosition >= asciiStart + i * metrics.glyphWidth &&
+          xPosition < asciiStart + (i + 1) * metrics.glyphWidth) {
         return i;
       }
     }
@@ -101,7 +148,12 @@ class HexPane extends StatelessWidget {
         focusNode: focusNode,
         child: LayoutBuilder(
           builder: (context, bounds) {
-            final layout = HexLayout(columns, digits, bounds.maxWidth);
+            final layout = HexLayout(
+              columns,
+              digits,
+              bounds.maxWidth,
+              HexMetrics.measure(context),
+            );
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Listener(
@@ -129,8 +181,8 @@ class HexPane extends StatelessWidget {
                       focusNode.requestFocus();
                       final col = layout.column(event.localPosition.dx);
                       final row =
-                          ((event.localPosition.dy - hexHeaderHeight) /
-                                  hexRowHeight)
+                          ((event.localPosition.dy - layout.metrics.headerHeight) /
+                                  layout.metrics.rowHeight)
                               .floor();
                       if (col != null && row >= 0 && !loading && !invalid) {
                         onSelect(offset + row * columns + col);
@@ -219,43 +271,59 @@ class HexPainter extends CustomPainter {
       Color color, {
       double fontSize = 13,
     }) {
-      _glyphs.get(value, color, fontSize).paint(canvas, Offset(x, y));
+      _glyphs
+          .get(value, color, fontSize, layout.metrics.textScaler)
+          .paint(canvas, Offset(x, y));
     }
 
     canvas.save();
     canvas.clipRect(Offset.zero & canvasSize);
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, canvasSize.width, hexHeaderHeight),
+      Rect.fromLTWH(0, 0, canvasSize.width, layout.metrics.headerHeight),
       rowPaint,
     );
-    draw('OFFSET', 18, 7, muted, fontSize: 11);
+    draw(
+      'OFFSET',
+      18 * layout.metrics.unitScale,
+      7 * layout.metrics.unitScale,
+      muted,
+      fontSize: 11,
+    );
     for (var c = 0; c < layout.columns; c++) {
       draw(
         c.toRadixString(16).padLeft(2, '0').toUpperCase(),
         layout.x(c),
-        7,
+        7 * layout.metrics.unitScale,
         muted,
         fontSize: 11,
       );
     }
-    draw('ASCII', layout.asciiStart, 7, muted, fontSize: 11);
+    draw(
+      'ASCII',
+      layout.asciiStart,
+      7 * layout.metrics.unitScale,
+      muted,
+      fontSize: 11,
+    );
     if (hasFile && !invalid) {
-      final rows = ((canvasSize.height - hexHeaderHeight) / hexRowHeight)
-          .ceil();
+      final rows =
+          ((canvasSize.height - layout.metrics.headerHeight) /
+                  layout.metrics.rowHeight)
+              .ceil();
       for (var row = 0; row < rows; row++) {
         final address = offset + row * layout.columns;
         if (address >= totalSize) break;
-        final y = hexHeaderHeight + row * hexRowHeight;
+        final y = layout.metrics.headerHeight + row * layout.metrics.rowHeight;
         if (row.isOdd) {
           canvas.drawRect(
-            Rect.fromLTWH(0, y, canvasSize.width, hexRowHeight),
+            Rect.fromLTWH(0, y, canvasSize.width, layout.metrics.rowHeight),
             rowPaint,
           );
         }
         draw(
           address.toRadixString(16).padLeft(layout.digits, '0').toUpperCase(),
-          18,
-          y + 4,
+          18 * layout.metrics.unitScale,
+          y + 4 * layout.metrics.unitScale,
           muted,
         );
         for (var col = 0; col < layout.columns; col++) {
@@ -273,13 +341,25 @@ class HexPainter extends CustomPainter {
               final color = kind == ByteDifference.modified ? red : orange;
               canvas.drawRRect(
                 RRect.fromRectAndRadius(
-                  Rect.fromLTWH(x - 1, y + 2, 20, 21),
-                  const Radius.circular(3),
+                  Rect.fromLTWH(
+                    x - layout.metrics.unitScale,
+                    y + 2 * layout.metrics.unitScale,
+                    layout.cell - 2 * layout.metrics.unitScale,
+                    layout.metrics.rowHeight - 4 * layout.metrics.unitScale,
+                  ),
+                  Radius.circular(3 * layout.metrics.unitScale),
                 ),
                 Paint()..color = color,
               );
               canvas.drawRect(
-                Rect.fromLTWH(layout.asciiStart + col * 8 - 1, y + 2, 8, 21),
+                Rect.fromLTWH(
+                  layout.asciiStart +
+                      col * layout.metrics.glyphWidth -
+                      layout.metrics.unitScale,
+                  y + 2 * layout.metrics.unitScale,
+                  layout.metrics.glyphWidth,
+                  layout.metrics.rowHeight - 4 * layout.metrics.unitScale,
+                ),
                 Paint()..color = color,
               );
             }
@@ -289,7 +369,12 @@ class HexPainter extends CustomPainter {
               : value == null
               ? '--'
               : value.toRadixString(16).padLeft(2, '0').toUpperCase();
-          draw(hex, x, y + 4, value == null || loading ? muted : foreground);
+          draw(
+            hex,
+            x,
+            y + 4 * layout.metrics.unitScale,
+            value == null || loading ? muted : foreground,
+          );
           final ascii = loading
               ? '·'
               : value == null
@@ -297,26 +382,39 @@ class HexPainter extends CustomPainter {
               : value >= 32 && value <= 126
               ? String.fromCharCode(value)
               : '.';
-          draw(ascii, layout.asciiStart + col * 8, y + 4, foreground);
+          draw(
+            ascii,
+            layout.asciiStart + col * layout.metrics.glyphWidth,
+            y + 4 * layout.metrics.unitScale,
+            foreground,
+          );
           if (edited.contains(at) && value != null) {
             canvas.drawLine(
-              Offset(x, y + 22),
-              Offset(x + 18, y + 22),
+              Offset(x, y + layout.metrics.rowHeight - 3 * layout.metrics.unitScale),
+              Offset(
+                x + layout.cell - 4 * layout.metrics.unitScale,
+                y + layout.metrics.rowHeight - 3 * layout.metrics.unitScale,
+              ),
               Paint()
                 ..color = const Color(0xFF4D8DEF)
-                ..strokeWidth = 2,
+                ..strokeWidth = 2 * layout.metrics.unitScale,
             );
           }
           if (selected == at && value != null && !loading) {
             canvas.drawRRect(
               RRect.fromRectAndRadius(
-                Rect.fromLTWH(x - 2, y + 1, 22, 23),
-                const Radius.circular(3),
+                Rect.fromLTWH(
+                  x - 2 * layout.metrics.unitScale,
+                  y + layout.metrics.unitScale,
+                  layout.cell,
+                  layout.metrics.rowHeight - 2 * layout.metrics.unitScale,
+                ),
+                Radius.circular(3 * layout.metrics.unitScale),
               ),
               Paint()
                 ..color = const Color(0xFF4D8DEF)
                 ..style = PaintingStyle.stroke
-                ..strokeWidth = 2,
+                ..strokeWidth = 2 * layout.metrics.unitScale,
             );
           }
         }
@@ -332,6 +430,10 @@ class HexPainter extends CustomPainter {
       old.offset != offset ||
       old.layout.columns != layout.columns ||
       old.layout.digits != layout.digits ||
+      old.layout.metrics.glyphWidth != layout.metrics.glyphWidth ||
+      old.layout.metrics.glyphHeight != layout.metrics.glyphHeight ||
+      old.layout.metrics.rowHeight != layout.metrics.rowHeight ||
+      old.layout.metrics.headerHeight != layout.metrics.headerHeight ||
       old.selected != selected ||
       old.edited != edited ||
       old.dark != dark ||
@@ -347,15 +449,16 @@ class HexPainter extends CustomPainter {
 final _glyphs = _GlyphCache();
 
 class _GlyphCache {
-  final _entries = <(String, Color, double), TextPainter>{};
-  TextPainter get(String text, Color color, double size) {
-    final key = (text, color, size);
+  final _entries = <(String, Color, double, TextScaler), TextPainter>{};
+  TextPainter get(String text, Color color, double size, TextScaler textScaler) {
+    final key = (text, color, size, textScaler);
     var painter = _entries.remove(key);
     painter ??= TextPainter(
       textDirection: TextDirection.ltr,
+      textScaler: textScaler,
       text: TextSpan(
         text: text,
-        style: TextStyle(fontFamily: 'Menlo', fontSize: size, color: color),
+        style: TextStyle(fontFamily: 'monospace', fontSize: size, color: color),
       ),
     )..layout();
     _entries[key] = painter;

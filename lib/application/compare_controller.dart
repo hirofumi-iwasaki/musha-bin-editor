@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 
 import '../infrastructure/file_comparison.dart';
 import '../infrastructure/file_hash.dart';
@@ -34,20 +35,30 @@ class CompareController extends ChangeNotifier {
   String? leftHash, rightHash;
   bool leftHashing = false, rightHashing = false;
   bool leftEditing = false, rightEditing = false;
+  bool leftSaving = false, rightSaving = false;
+  bool _saving = false;
   final Map<int, int> leftEdits = {}, rightEdits = {};
   final Map<int, int> _leftOriginalValues = {}, _rightOriginalValues = {};
   int? pendingNibble;
   int _generation = 0;
   int _viewGeneration = 0;
-  int _openGeneration = 0;
+  int _leftOpenGeneration = 0;
+  int _rightOpenGeneration = 0;
   int _leftHashGeneration = 0;
   int _rightHashGeneration = 0;
+  FileHashJob? _leftHashJob;
+  FileHashJob? _rightHashJob;
   bool _disposed = false;
   Isolate? _worker;
   ReceivePort? _port;
   StreamSubscription<dynamic>? _subscription;
+  SendPort? _workerControl;
+  Completer<void>? _workerClosed;
+  Completer<void>? _workerReady;
   Directory? _benchmarkDirectory;
   Future<void> _readQueue = Future.value();
+  Future<Isolate>? _workerStarting;
+  Future<void>? _closeFuture;
 
   int get length => math.max(left?.stamp.size ?? 0, right?.stamp.size ?? 0);
   int get rowCount => (length + bytesPerRow - 1) ~/ bytesPerRow;
@@ -64,7 +75,7 @@ class CompareController extends ChangeNotifier {
       leftHash != null && rightHash != null && leftHash != rightHash;
 
   void setHashAlgorithm(FileHashAlgorithm value) {
-    if (hashAlgorithm == value) return;
+    if (_disposed || _saving || hashAlgorithm == value) return;
     hashAlgorithm = value;
     final l = left;
     final r = right;
@@ -73,9 +84,17 @@ class CompareController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> _calculateHash(PagedFile file, bool isLeft) async {
+  Future<void> _calculateHash(
+    PagedFile file,
+    bool isLeft, {
+    bool allowDuringSave = false,
+  }) async {
+    if (_saving && !allowDuringSave) return;
     final generation = isLeft ? ++_leftHashGeneration : ++_rightHashGeneration;
     final algorithm = hashAlgorithm;
+    final previous = isLeft ? _leftHashJob : _rightHashJob;
+    if (previous != null) await previous.cancel();
+    if (_saving && !allowDuringSave) return;
     if (isLeft) {
       leftHash = null;
       leftHashing = true;
@@ -86,7 +105,18 @@ class CompareController extends ChangeNotifier {
     _notify();
     String? result;
     try {
-      result = await calculateFileHash(file.path, algorithm);
+      final job = await FileHashJob.start(file.path, algorithm);
+      if (_disposed ||
+          generation != (isLeft ? _leftHashGeneration : _rightHashGeneration)) {
+        await job.cancel();
+        return;
+      }
+      if (isLeft) {
+        _leftHashJob = job;
+      } else {
+        _rightHashJob = job;
+      }
+      result = await job.result;
     } catch (_) {
       result = null;
     }
@@ -99,9 +129,11 @@ class CompareController extends ChangeNotifier {
     if (isLeft) {
       leftHash = result;
       leftHashing = false;
+      _leftHashJob = null;
     } else {
       rightHash = result;
       rightHashing = false;
+      _rightHashJob = null;
     }
     _notify();
   }
@@ -119,8 +151,20 @@ class CompareController extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
-  Future<void> open(String path, bool isLeft) async {
-    final ticket = ++_openGeneration;
+  Future<void> open(String path, bool isLeft) => _open(path, isLeft);
+
+  Future<void> _open(
+    String path,
+    bool isLeft, {
+    bool allowDuringSave = false,
+  }) async {
+    if (_disposed) return;
+    if (_saving && !allowDuringSave) {
+      error = 'A save is in progress. Wait before opening another file.';
+      _notify();
+      return;
+    }
+    final ticket = isLeft ? ++_leftOpenGeneration : ++_rightOpenGeneration;
     try {
       final canonical = await File(path).resolveSymbolicLinks();
       final other = isLeft ? right : left;
@@ -130,20 +174,33 @@ class CompareController extends ChangeNotifier {
         return;
       }
       final file = PagedFile(canonical, await FileStamp.read(canonical));
-      if (_disposed || ticket != _openGeneration) return;
-      stop(notify: false);
+      if (_disposed ||
+          ticket != _openGenerationFor(isLeft) ||
+          (_saving && !allowDuringSave)) {
+        if (_saving && !allowDuringSave) _reportOpenBlocked();
+        return;
+      }
+      await _stop(notify: false);
+      if (_disposed ||
+          ticket != _openGenerationFor(isLeft) ||
+          (_saving && !allowDuringSave)) {
+        if (_saving && !allowDuringSave) _reportOpenBlocked();
+        return;
+      }
       if (isLeft) {
         left = file;
         leftEdits.clear();
         _leftOriginalValues.clear();
         leftEditing = false;
-        unawaited(_calculateHash(file, true));
+        unawaited(_calculateHash(file, true, allowDuringSave: allowDuringSave));
       } else {
         right = file;
         rightEdits.clear();
         _rightOriginalValues.clear();
         rightEditing = false;
-        unawaited(_calculateHash(file, false));
+        unawaited(
+          _calculateHash(file, false, allowDuringSave: allowDuringSave),
+        );
       }
       topRow = 0;
       selected = null;
@@ -151,20 +208,28 @@ class CompareController extends ChangeNotifier {
       invalid = false;
       complete = false;
       diffBytes = diffRuns = processed = 0;
-      await refresh();
-      if (ticket != _openGeneration || _disposed) return;
+      await refresh(allowDuringSave: allowDuringSave);
+      if (ticket != _openGenerationFor(isLeft) || _disposed) return;
       if (canCompare) {
-        await compare();
+        await _compare(allowDuringSave: allowDuringSave);
       } else {
         status = 'One file open · Read-only preview';
         _notify();
       }
     } catch (e) {
-      if (ticket == _openGeneration && !_disposed) {
+      if (ticket == _openGenerationFor(isLeft) && !_disposed) {
         error = 'Unable to open file: $e';
         _notify();
       }
     }
+  }
+
+  int _openGenerationFor(bool isLeft) =>
+      isLeft ? _leftOpenGeneration : _rightOpenGeneration;
+
+  void _reportOpenBlocked() {
+    error = 'A save is in progress. Wait before opening another file.';
+    _notify();
   }
 
   void reportError(String message) {
@@ -173,6 +238,7 @@ class CompareController extends ChangeNotifier {
   }
 
   Future<void> loadBenchmarkFixture() async {
+    if (_saving) return;
     try {
       _benchmarkDirectory ??= await Directory.systemTemp.createTemp(
         'mushagaeshi-benchmark-',
@@ -201,7 +267,8 @@ class CompareController extends ChangeNotifier {
     }
   }
 
-  Future<void> refresh() {
+  Future<void> refresh({bool allowDuringSave = false}) {
+    if (_saving && !allowDuringSave) return Future<void>.value();
     final ticket = ++_viewGeneration;
     final at = offset;
     final count = (visibleRows + 1) * bytesPerRow;
@@ -235,7 +302,7 @@ class CompareController extends ChangeNotifier {
         loading = false;
       } catch (e) {
         if (_disposed || ticket != _viewGeneration) return;
-        stop(notify: false);
+        unawaited(stop(notify: false));
         invalid = true;
         loading = false;
         complete = false;
@@ -278,6 +345,7 @@ class CompareController extends ChangeNotifier {
   }
 
   void setEditing(bool isLeft, bool enabled) {
+    if (isLeft ? leftSaving : rightSaving) return;
     if (isLeft) {
       leftEditing = enabled;
     } else {
@@ -291,7 +359,11 @@ class CompareController extends ChangeNotifier {
   }
 
   bool inputHex(String character) {
-    if (selected == null || !editing(selectedLeft)) return false;
+    if (selected == null ||
+        !editing(selectedLeft) ||
+        (selectedLeft ? leftSaving : rightSaving)) {
+      return false;
+    }
     final digit = int.tryParse(character, radix: 16);
     if (digit == null) return false;
     if (pendingNibble == null) {
@@ -338,36 +410,98 @@ class CompareController extends ChangeNotifier {
     bool isLeft,
     String destination, {
     bool allowExternalChange = false,
-    Future<void> Function(String stagedPath, String destinationPath)? install,
+    SaveInstaller? install,
+    String? stagingDirectory,
   }) async {
     final file = isLeft ? left : right;
     if (file == null) {
       return const SaveResult(SaveOutcome.failed, 'No file is open.');
     }
-    final other = isLeft ? right : left;
-    if (other != null && await _sameFile(destination, other.path)) {
+    if (_saving || (isLeft ? leftSaving : rightSaving)) {
       return const SaveResult(
         SaveOutcome.failed,
-        'The other pane already has this file open. Choose another destination.',
+        'A save is already in progress.',
       );
     }
-    final result = await safelySave(
-      sourcePath: file.path,
-      sourceStamp: file.stamp,
-      destinationPath: destination,
-      edits: isLeft ? leftEdits : rightEdits,
-      allowExternalChange: allowExternalChange,
-      install: install,
-    );
-    if (result.outcome == SaveOutcome.saved) {
-      await open(destination, isLeft);
-      status = 'Saved ${destination.split('/').last}';
-      _notify();
-    } else if (result.message != null) {
-      error = result.message;
+    _saving = true;
+    if (isLeft) {
+      leftSaving = true;
+    } else {
+      rightSaving = true;
+    }
+    _notify();
+    var result = const SaveResult(SaveOutcome.failed, 'Unable to start save.');
+    try {
+      final other = isLeft ? right : left;
+      if (other != null && await _sameFile(destination, other.path)) {
+        return const SaveResult(
+          SaveOutcome.failed,
+          'The other pane already has this file open. Choose another destination.',
+        );
+      }
+      try {
+        final destinationSnapshot = await DestinationSnapshot.capture(
+          destination,
+        );
+        // Viewport reads, comparison workers and streaming hashes can retain
+        // file handles. Stop them before the staged file is installed.
+        await _stop(notify: false);
+        await _readQueue;
+        await Future.wait([
+          _leftHashJob?.cancel() ?? Future<void>.value(),
+          _rightHashJob?.cancel() ?? Future<void>.value(),
+        ]);
+        _leftHashJob = null;
+        _rightHashJob = null;
+        // safelySave copies this edit map before its first await. Keep the UI
+        // editing lock until that transaction has installed or failed.
+        result = await safelySave(
+          sourcePath: file.path,
+          sourceStamp: file.stamp,
+          destinationPath: destination,
+          edits: isLeft ? leftEdits : rightEdits,
+          allowExternalChange: allowExternalChange,
+          install: install,
+          stagingDirectory: stagingDirectory,
+          destinationSnapshot: destinationSnapshot,
+        );
+      } catch (error) {
+        result = SaveResult(SaveOutcome.failed, 'Unable to save file: $error');
+      }
+      if (result.outcome == SaveOutcome.saved) {
+        try {
+          // Do not clear frozen edits until the installed bytes can be adopted.
+          // Retain the global save lock while adopting the result so another
+          // open cannot race this document commit.
+          await _open(destination, isLeft, allowDuringSave: true);
+          if ((isLeft ? left : right)?.path !=
+              await File(destination).resolveSymbolicLinks()) {
+            result = const SaveResult(
+              SaveOutcome.savedButCouldNotReopen,
+              'The file was saved, but could not be reopened.',
+            );
+          } else {
+            status = 'Saved ${p.basename(destination)}';
+          }
+        } catch (_) {
+          result = const SaveResult(
+            SaveOutcome.savedButCouldNotReopen,
+            'The file was saved, but could not be reopened.',
+          );
+        }
+      } else if (result.message != null) {
+        error = result.message;
+      }
+      return result;
+    } finally {
+      _saving = false;
+      if (isLeft) {
+        leftSaving = false;
+      } else {
+        rightSaving = false;
+      }
       _notify();
     }
-    return result;
   }
 
   void jump(int at) {
@@ -383,22 +517,40 @@ class CompareController extends ChangeNotifier {
     unawaited(refresh());
   }
 
-  Future<void> compare({bool? forward}) async {
-    if (!canCompare) return;
-    stop(notify: false);
-    final generation = _generation;
-    busy = true;
+  Future<void> compare({bool? forward}) => _compare(forward: forward);
+
+  Future<void> _compare({bool? forward, bool allowDuringSave = false}) async {
+    if ((_saving && !allowDuringSave) || !canCompare) return;
+    final generation = _generation + 1;
     if (forward == null) {
+      // Clear completed data synchronously so a cancellation raced against the
+      // worker shutdown cannot leave a stale "complete" result visible.
       complete = false;
       diffBytes = diffRuns = processed = 0;
     }
+    await _stop(notify: false);
+    if (_disposed ||
+        generation != _generation ||
+        (_saving && !allowDuringSave)) {
+      return;
+    }
+    busy = true;
     status = forward == null ? 'Comparing files…' : 'Finding difference…';
     _notify();
     final port = ReceivePort();
     _port = port;
     _subscription = port.listen((dynamic message) {
-      if (_disposed || generation != _generation) return;
       final m = message as Map;
+      if (m['type'] == 'ready') {
+        _workerControl = m['control'] as SendPort;
+        _workerReady?.complete();
+        return;
+      }
+      if (m['type'] == 'closed') {
+        _workerClosed?.complete();
+        return;
+      }
+      if (_disposed || generation != _generation) return;
       switch (m['type']) {
         case 'progress':
           if (forward == null) {
@@ -429,23 +581,21 @@ class CompareController extends ChangeNotifier {
                   'Differences 0x${target.toRadixString(16).toUpperCase()}';
             }
           }
-          unawaited(_subscription?.cancel());
-          _port?.close();
-          _port = null;
         case 'error':
           busy = false;
           invalid = true;
           complete = false;
           error = m['message'] as String;
           status = 'Comparison error · Reopen the files';
-          unawaited(_subscription?.cancel());
-          _port?.close();
-          _port = null;
+        case 'canceled':
+          busy = false;
       }
       _notify();
     });
+    _workerReady = Completer<void>();
+    _workerClosed = Completer<void>();
     try {
-      final worker = await Isolate.spawn(compareWorker, <String, Object>{
+      final starting = Isolate.spawn(compareWorker, <String, Object>{
         'port': port.sendPort,
         'left': left!.path,
         'right': right!.path,
@@ -457,14 +607,21 @@ class CompareController extends ChangeNotifier {
           'cursor': selected ?? (forward ? offset - 1 : offset),
         'forward': ?forward,
       });
+      _workerStarting = starting;
+      final worker = await starting;
+      if (identical(_workerStarting, starting)) _workerStarting = null;
       if (_disposed || generation != _generation) {
-        worker.kill(priority: Isolate.immediate);
+        _worker = worker;
+        await _stop(notify: false);
       } else {
         _worker = worker;
       }
     } catch (e) {
+      _workerStarting = null;
+      _workerReady = null;
+      _workerClosed = null;
       if (generation == _generation && !_disposed) {
-        stop(notify: false);
+        await _stop(notify: false);
         error = e.toString();
         status = 'Unable to start comparison';
         _notify();
@@ -472,10 +629,32 @@ class CompareController extends ChangeNotifier {
     }
   }
 
-  void stop({bool notify = true}) {
+  /// Cancels the comparison and completes once its worker has closed handles.
+  ///
+  /// Callers that will replace a file must await this rather than relying on
+  /// cancellation being delivered before the worker has received its control
+  /// port.
+  Future<void> stop({bool notify = true}) => _stop(notify: notify);
+
+  Future<void> _stop({bool notify = true}) async {
     _generation++;
-    _worker?.kill(priority: Isolate.immediate);
+    final closed = _workerClosed;
+    var control = _workerControl;
+    if (control == null && _worker != null) {
+      final ready = _workerReady;
+      if (ready != null && !ready.isCompleted) await ready.future;
+      control = _workerControl;
+    }
+    if (control != null && closed != null && !closed.isCompleted) {
+      control.send('cancel');
+      await closed.future;
+    } else {
+      _worker?.kill(priority: Isolate.immediate);
+    }
     _worker = null;
+    _workerControl = null;
+    _workerClosed = null;
+    _workerReady = null;
     unawaited(_subscription?.cancel());
     _subscription = null;
     _port?.close();
@@ -487,18 +666,53 @@ class CompareController extends ChangeNotifier {
     if (notify) _notify();
   }
 
-  @override
-  void dispose() {
+  /// Stops all asynchronous file work and waits until every file handle closes.
+  ///
+  /// Desktop widget disposal cannot await this operation. Callers that remove a
+  /// document directory can await it before deletion.
+  Future<void> close() => _closeFuture ??= _close();
+
+  Future<void> _close() async {
     _disposed = true;
-    ++_openGeneration;
+    ++_leftOpenGeneration;
+    ++_rightOpenGeneration;
     ++_viewGeneration;
     ++_leftHashGeneration;
     ++_rightHashGeneration;
-    stop(notify: false);
+
+    final leftHash = _leftHashJob;
+    final rightHash = _rightHashJob;
+    _leftHashJob = null;
+    _rightHashJob = null;
+    await Future.wait([
+      leftHash?.cancel() ?? Future<void>.value(),
+      rightHash?.cancel() ?? Future<void>.value(),
+    ]);
+
+    // A close may arrive while an isolate is spawning. Wait for that spawn,
+    // then stop the worker it produced, until neither state remains.
+    while (_workerStarting != null || _worker != null) {
+      final starting = _workerStarting;
+      if (starting != null) {
+        try {
+          await starting;
+        } catch (_) {
+          // _compare reports startup failures when the controller is active.
+        }
+      }
+      await _stop(notify: false);
+    }
+    await _readQueue;
+
     final fixture = _benchmarkDirectory;
     if (fixture != null) {
-      unawaited(fixture.delete(recursive: true).catchError((_) => fixture));
+      await fixture.delete(recursive: true).catchError((_) => fixture);
     }
+  }
+
+  @override
+  void dispose() {
+    unawaited(close());
     super.dispose();
   }
 }
