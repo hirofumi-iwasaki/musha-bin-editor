@@ -17,7 +17,7 @@ class MemoryPreviewController extends CompareController {
     right = PagedFile('right.bin', stamp);
   }
   @override
-  Future<void> refresh() async {
+  Future<void> refresh({bool allowDuringSave = false}) async {
     loading = false;
     leftBytes = Uint8List((visibleRows + 1) * bytesPerRow);
     rightBytes = Uint8List(leftBytes.length);
@@ -119,4 +119,38 @@ void main() {
       await tester.binding.setSurfaceSize(null);
     });
   }
+
+  testWidgets('large text scale keeps both hexadecimal panes interactive', (
+    tester,
+  ) async {
+    final c = MemoryPreviewController();
+    c.leftHash = '0123456789abcdef0123456789abcdef01234567';
+    c.rightHash = '89abcdef0123456789abcdef0123456789abcdef';
+    await tester.binding.setSurfaceSize(const Size(980, 800));
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: MaterialApp(home: CompareWindow(controller: c)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final surface = find.byKey(const ValueKey('left-hex-surface'));
+    await tester.tapAt(tester.getTopLeft(surface) + const Offset(200, 180));
+    await tester.pump();
+    final painters = tester.widgetList<CustomPaint>(find.byType(CustomPaint));
+    final hexPainters = painters
+        .map((paint) => paint.painter)
+        .whereType<HexPainter>()
+        .toList();
+    expect(hexPainters, hasLength(2));
+    for (final painter in hexPainters) {
+      expect(painter.layout.metrics.unitScale, closeTo(2, 0.01));
+      expect(painter.layout.metrics.rowHeight, greaterThan(hexRowHeight));
+      expect(painter.layout.requiredWidth, greaterThan(980));
+    }
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+    await tester.binding.setSurfaceSize(null);
+  });
 }

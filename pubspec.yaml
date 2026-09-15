@@ -6,8 +6,12 @@ environment:
   sdk: '>=3.13.3 <4.0.0'
 dependencies:
   crypto: ^3.0.7
+  desktop_drop: 0.8.4
+  file_selector: 1.1.0
   flutter:
     sdk: flutter
+  path: 1.9.1
+  window_manager: 0.5.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

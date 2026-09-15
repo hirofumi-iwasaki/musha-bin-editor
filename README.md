@@ -6,6 +6,18 @@ Repository: [hirofumi-iwasaki/musha-bin-editor](https://github.com/hirofumi-iwas
 
 Version 0.3.0 adds per-file SHA-1 and MD5 hash display to the side-by-side comparison and editing features. The application and its README use English. Language selection and localization are deferred.
 
+## v0.4.0 development status
+
+The `release/0.4.0` branch adds Windows x64/Arm64 and Ubuntu x64/Arm64 runners, desktop integration and native save backends. These targets are under development: Windows/Ubuntu native builds and desktop acceptance have not yet been performed. Package metadata remains at 0.3.0 until release preparation.
+
+Windows/Linux use Ctrl instead of Command for the shortcuts listed below. Their file dialogs, pane drops and window close requests are routed through desktop adapters. Hexadecimal geometry and glyph rendering share measured font metrics, including enlarged text.
+
+Native CI and packaging scripts are included. Run `tool/build_windows.ps1 -Architecture x64` (or `arm64`) on the corresponding Windows host, and `bash tool/build_linux.sh x64` (or `arm64`) on the corresponding Ubuntu host. Each archive includes the full runtime bundle and license/source metadata. Arm64 CI bootstraps the pinned official Flutter source checkout to obtain native Dart/engine artifacts. CI compilation is not a substitute for GUI acceptance.
+
+Ubuntu existing-file replacement currently rejects special permission bits, owner/group changes, ACLs or other extended attributes (including cases where inspection fails), rather than discard metadata. Ordinary rwx permissions are preserved. Native failure/recovery behavior still requires Ubuntu and Windows execution tests. File change detection uses size and modification time and cannot detect every possible external rewrite.
+
+See the [v0.4.0 continuation plan](.chatgpt/RELEASE_0.4.0_PLAN.md) for completed work, remaining checks and the next step.
+
 ## Requirements
 
 - macOS 15 Sequoia or macOS 26 Tahoe

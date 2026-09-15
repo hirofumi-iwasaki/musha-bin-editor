@@ -182,3 +182,15 @@
 
 - Replaced the mistaken “Mushaaeshi” spelling with “Mushagaeshi” throughout repository source, package metadata, tests, scripts, documentation and macOS product settings.
 - Kept the existing correctly spelled bundle identifier for compatibility while standardizing the external product name as **Mushagaeshi Binary Editor**.
+
+
+### 2026-09-15 v0.4.0 implementation checkpoint (Terra delegation)
+
+- Parent task managed scope and integration; GPT-5.6 Terra agents implemented UI/platform portability, save transactions and native CI/backends.
+- Added Windows/Ubuntu runners and adapters using file_selector 1.1.0, desktop_drop 0.8.4, window_manager 0.5.2 and path 1.9.1. Existing macOS channel behavior remains.
+- Unified measured/scaled glyph geometry, hit testing, scroll calculations and highlights; fixed initialization lifecycle and preserved the macOS metadata entry.
+- Replaced unsafe copy fallback, froze edit snapshots, serialized saves through adoption, added worker handle-close acknowledgements, destination-change checks and recovery paths. Tests cover open/save races, source changes during Save As and ambiguous installation.
+- Added Windows ReplaceFileW/MoveFileExW and Ubuntu same-filesystem rename backends plus conservative metadata rejection. These native backends have not been executed on their target OS.
+- Added pinned native CI/bootstrap and complete-bundle packaging with architecture inspection, notices and source references. No CI run or release publication has occurred.
+- Integration checkpoint: flutter analyze clean; all 29 Flutter tests passed. macOS Release build and packaging succeeded (arm64, strict deep code signature valid, development version 0.3.0 build 3). The archive includes LICENSE, third-party notices/licenses and source/build metadata.
+- Remaining: native Windows/Ubuntu builds and GUI acceptance on x64/Arm64, OS save-failure validation, macOS regression acceptance and eventual release metadata/publishing.

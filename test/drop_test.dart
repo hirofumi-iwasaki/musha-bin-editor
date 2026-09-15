@@ -22,7 +22,7 @@ class DropRecordingController extends CompareController {
   }
 
   @override
-  Future<void> refresh() async {
+  Future<void> refresh({bool allowDuringSave = false}) async {
     loading = false;
     leftBytes = Uint8List((visibleRows + 1) * bytesPerRow);
     rightBytes = Uint8List(leftBytes.length);
