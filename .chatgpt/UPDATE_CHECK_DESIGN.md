@@ -264,4 +264,8 @@ These do not block the design or the release branch:
 4. Extend the CI push trigger to `release/0.5.0`; run analysis, tests and native builds.
 5. Verify offline startup, disposal, editing responsiveness and download links on supported platforms.
 
-The user approved the feature requirements; the interval, timeout, dependencies and detailed policy above remain design proposals. Implementation has not started.
+## Implementation record (2026-09-15)
+
+Implemented on `release/0.5.0` with package metadata from `package_info_plus`, a bounded `dart:io` HTTPS client, `shared_preferences` state, and `url_launcher` behind injected interfaces. The check starts after the first frame, uses the documented 5-second/1 MiB limits, cache cadence and backoff, selects only uploaded exact-name assets for the current Dart FFI process ABI, and keeps automatic failures silent. Status-row links are user-click-only and validate HTTPS GitHub release/asset URLs before launching. Both macOS sandbox entitlement files now grant outbound network client access. `pubspec.yaml` is `0.5.0+5`, and CI targets `release/0.5.0`.
+
+Unit and widget tests cover stable parsing, asset/release-page selection, ETag behavior, no-cache 304 recovery, timeout cancellation, disposal/concurrency guards, preference failures, cache invalidation/restoration, rate-limit backoff, disabled/cadence behavior, and status-link launch. Static analysis and 40 Flutter tests passed. Native clean-host behavior and a published-release smoke test remain release validation work.

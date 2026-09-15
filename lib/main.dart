@@ -17,6 +17,7 @@ import 'infrastructure/file_hash.dart';
 import 'infrastructure/safe_save.dart';
 import 'presentation/hex_pane.dart';
 import 'platform/desktop_platform.dart';
+import 'update/update_check.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,8 +26,13 @@ Future<void> main() async {
 }
 
 class MushagaeshiBinaryEditorApp extends StatelessWidget {
-  const MushagaeshiBinaryEditorApp({super.key, this.desktop});
+  const MushagaeshiBinaryEditorApp({
+    super.key,
+    this.desktop,
+    this.updateChecker,
+  });
   final DesktopPlatform? desktop;
+  final UpdateCheckController? updateChecker;
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'Mushagaeshi Binary Editor',
@@ -46,14 +52,20 @@ class MushagaeshiBinaryEditorApp extends StatelessWidget {
       useMaterial3: true,
       scaffoldBackgroundColor: const Color(0xFF191E26),
     ),
-    home: CompareWindow(desktop: desktop),
+    home: CompareWindow(desktop: desktop, updateChecker: updateChecker),
   );
 }
 
 class CompareWindow extends StatefulWidget {
-  const CompareWindow({super.key, this.controller, this.desktop});
+  const CompareWindow({
+    super.key,
+    this.controller,
+    this.desktop,
+    this.updateChecker,
+  });
   final CompareController? controller;
   final DesktopPlatform? desktop;
+  final UpdateCheckController? updateChecker;
   @override
   State<CompareWindow> createState() => _CompareWindowState();
 }
@@ -72,6 +84,8 @@ class _CompareWindowState extends State<CompareWindow> {
   late final Future<void> _desktopReady;
   Object? _desktopInitializationError;
   var _desktopInitialized = false;
+  UpdateCheckController? _updateChecker;
+  var _ownsUpdateChecker = false;
 
   double get _rowHeight => HexMetrics.measure(context).rowHeight;
   double get _hexHeaderHeight => HexMetrics.measure(context).headerHeight;
@@ -84,9 +98,34 @@ class _CompareWindowState extends State<CompareWindow> {
     verticalScroll.addListener(_scrollChanged);
     desktop.setEventHandler(_handleDesktopEvent);
     _desktopReady = _initializeDesktop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_startUpdateCheck());
+    });
     if (const bool.fromEnvironment('BENCHMARK')) {
       unawaited(benchmark());
     }
+  }
+
+  Future<void> _startUpdateCheck() async {
+    UpdateCheckController? checker = widget.updateChecker;
+    try {
+      checker ??= await UpdateCheckController.create();
+    } catch (_) {
+      // Automatic update checks are deliberately silent.
+      return;
+    }
+    if (!mounted) {
+      if (widget.updateChecker == null) checker.dispose();
+      return;
+    }
+    _updateChecker = checker;
+    _ownsUpdateChecker = widget.updateChecker == null;
+    checker.addListener(_updateChanged);
+    await checker.checkAutomatic();
+  }
+
+  void _updateChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _initializeDesktop() async {
@@ -96,9 +135,13 @@ class _CompareWindowState extends State<CompareWindow> {
       if (mounted) setState(() {});
     } catch (error, stackTrace) {
       _desktopInitializationError = error;
-      debugPrint('Unable to initialize desktop integration: $error\n$stackTrace');
+      debugPrint(
+        'Unable to initialize desktop integration: $error\n$stackTrace',
+      );
       if (mounted) {
-        controller.reportError('Unable to initialize desktop integration: $error');
+        controller.reportError(
+          'Unable to initialize desktop integration: $error',
+        );
         setState(() {});
       }
     }
@@ -109,7 +152,9 @@ class _CompareWindowState extends State<CompareWindow> {
     if (!_desktopInitialized || _desktopInitializationError != null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Desktop integration is not available.')),
+          const SnackBar(
+            content: Text('Desktop integration is not available.'),
+          ),
         );
       }
       return false;
@@ -146,6 +191,8 @@ class _CompareWindowState extends State<CompareWindow> {
 
   @override
   void dispose() {
+    _updateChecker?.removeListener(_updateChanged);
+    if (_ownsUpdateChecker) _updateChecker?.dispose();
     unawaited(_desktopReady.whenComplete(desktop.dispose));
     verticalScroll
       ..removeListener(_scrollChanged)
@@ -923,6 +970,16 @@ class _CompareWindowState extends State<CompareWindow> {
                         controller.status,
                         style: const TextStyle(fontSize: 12),
                       ),
+                      if (_updateChecker?.offer case final offer?) ...[
+                        Text(
+                          'Update ${offer.version} available',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        TextButton(
+                          onPressed: _updateChecker!.openOffer,
+                          child: Text(offer.linkLabel),
+                        ),
+                      ],
                       if (controller.pair && !controller.invalid)
                         Text(
                           '${controller.complete ? 'Differences' : 'Found so far'} ${controller.diffBytes} bytes / ${controller.diffRuns} ranges',
