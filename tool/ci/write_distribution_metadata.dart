@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 
 void main(List<String> args) {
-  if (args.length != 3)
+  if (args.length != 3) {
     throw ArgumentError('usage: <directory> <target> <flutter-bin>');
+  }
   final output = Directory(args[0]);
   if (!output.existsSync()) throw ArgumentError.value(output.path, 'directory');
   File('LICENSE').copySync('${output.path}${Platform.pathSeparator}LICENSE');
@@ -77,12 +78,13 @@ ${copied.isEmpty ? '(none found; inspect pubspec.lock before distribution)' : co
 
 String _run(String executable, List<String> arguments) {
   final result = Process.runSync(executable, arguments);
-  if (result.exitCode != 0)
+  if (result.exitCode != 0) {
     throw ProcessException(
       executable,
       arguments,
       '${result.stderr}',
       result.exitCode,
     );
+  }
   return result.stdout.toString().trim();
 }
