@@ -1,7 +1,7 @@
 name: mushagaeshi_binary_editor
 description: Mushagaeshi Binary Editor, a desktop hexadecimal comparison app.
 publish_to: none
-version: 0.6.0+6
+version: 0.7.0+7
 environment:
   sdk: '>=3.13.3 <4.0.0'
 dependencies:
@@ -9,6 +9,8 @@ dependencies:
   desktop_drop: 0.8.4
   file_selector: 1.1.0
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   path: 1.9.1
   package_info_plus: ^8.3.0
@@ -20,4 +22,5 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
 flutter:
+  generate: true
   uses-material-design: true

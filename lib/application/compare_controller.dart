@@ -11,6 +11,45 @@ import '../infrastructure/file_comparison.dart';
 import '../infrastructure/file_hash.dart';
 import '../infrastructure/safe_save.dart';
 
+/// UI-facing operation state. Text is selected by the presentation layer so a
+/// language change immediately updates an already-visible status message.
+enum CompareStatus {
+  openTwoFiles,
+  oneFilePreview,
+  readError,
+  editingEnabled,
+  editingDisabled,
+  enterSecondHexDigit,
+  edited,
+  hexInputCanceled,
+  saved,
+  offset,
+  comparing,
+  findingDifference,
+  comparisonComplete,
+  filesIdentical,
+  noLaterDifferences,
+  noEarlierDifferences,
+  differenceAt,
+  comparisonError,
+  comparisonStartFailed,
+  canceled,
+}
+
+enum CompareError {
+  openingBlockedBySave,
+  alreadyOpenInOtherPane,
+  openFileFailed,
+  readFileFailed,
+  comparisonFailed,
+  desktopInitializationFailed,
+  dropOnPane,
+  dropTooManyFiles,
+  dropNotFinderFile,
+  dropNotReadableFile,
+  dropCouldNotOpen,
+}
+
 class CompareController extends ChangeNotifier {
   PagedFile? left;
   PagedFile? right;
@@ -25,8 +64,13 @@ class CompareController extends ChangeNotifier {
   bool busy = false;
   bool complete = false;
   bool invalid = false;
-  String status = 'Open two files to compare';
+  CompareStatus status = CompareStatus.openTwoFiles;
+  String? statusDetail;
+
+  /// Raw diagnostic supplied by the OS or filesystem. It is displayed only
+  /// after the localized application-owned [errorCode] heading.
   String? error;
+  CompareError? errorCode;
   int diffBytes = 0;
   int diffRuns = 0;
   int processed = 0;
@@ -73,6 +117,11 @@ class CompareController extends ChangeNotifier {
   bool hashing(bool isLeft) => isLeft ? leftHashing : rightHashing;
   bool get hashesDiffer =>
       leftHash != null && rightHash != null && leftHash != rightHash;
+
+  void _setStatus(CompareStatus value, [String? detail]) {
+    status = value;
+    statusDetail = detail;
+  }
 
   void setHashAlgorithm(FileHashAlgorithm value) {
     if (_disposed || _saving || hashAlgorithm == value) return;
@@ -160,7 +209,7 @@ class CompareController extends ChangeNotifier {
   }) async {
     if (_disposed) return;
     if (_saving && !allowDuringSave) {
-      error = 'A save is in progress. Wait before opening another file.';
+      _report(CompareError.openingBlockedBySave);
       _notify();
       return;
     }
@@ -169,7 +218,7 @@ class CompareController extends ChangeNotifier {
       final canonical = await File(path).resolveSymbolicLinks();
       final other = isLeft ? right : left;
       if (other != null && await _sameFile(canonical, other.path)) {
-        error = 'This file is already open in the other pane. Open a copy to edit it independently.';
+        _report(CompareError.alreadyOpenInOtherPane);
         _notify();
         return;
       }
@@ -205,6 +254,7 @@ class CompareController extends ChangeNotifier {
       topRow = 0;
       selected = null;
       error = null;
+      errorCode = null;
       invalid = false;
       complete = false;
       diffBytes = diffRuns = processed = 0;
@@ -213,12 +263,12 @@ class CompareController extends ChangeNotifier {
       if (canCompare) {
         await _compare(allowDuringSave: allowDuringSave);
       } else {
-        status = 'One file open · Read-only preview';
+        _setStatus(CompareStatus.oneFilePreview);
         _notify();
       }
     } catch (e) {
       if (ticket == _openGenerationFor(isLeft) && !_disposed) {
-        error = 'Unable to open file: $e';
+        _report(CompareError.openFileFailed, e.toString());
         _notify();
       }
     }
@@ -228,12 +278,17 @@ class CompareController extends ChangeNotifier {
       isLeft ? _leftOpenGeneration : _rightOpenGeneration;
 
   void _reportOpenBlocked() {
-    error = 'A save is in progress. Wait before opening another file.';
+    _report(CompareError.openingBlockedBySave);
     _notify();
   }
 
-  void reportError(String message) {
-    error = message;
+  void _report(CompareError code, [String? detail]) {
+    errorCode = code;
+    error = detail;
+  }
+
+  void reportError(CompareError code, {String? detail}) {
+    _report(code, detail);
     _notify();
   }
 
@@ -262,7 +317,7 @@ class CompareController extends ChangeNotifier {
       await open(lp, true);
       await open(rp, false);
     } catch (e) {
-      error = e.toString();
+      _report(CompareError.openFileFailed, e.toString());
       _notify();
     }
   }
@@ -306,8 +361,8 @@ class CompareController extends ChangeNotifier {
         invalid = true;
         loading = false;
         complete = false;
-        error = e.toString();
-        status = 'Read error · Reopen the file';
+        _report(CompareError.readFileFailed, e.toString());
+        _setStatus(CompareStatus.readError);
       }
       _notify();
     });
@@ -352,9 +407,10 @@ class CompareController extends ChangeNotifier {
       rightEditing = enabled;
     }
     pendingNibble = null;
-    status = enabled
-        ? '${isLeft ? 'Left' : 'Right'} editing enabled'
-        : '${isLeft ? 'Left' : 'Right'} editing disabled';
+    _setStatus(
+      enabled ? CompareStatus.editingEnabled : CompareStatus.editingDisabled,
+      isLeft ? 'left' : 'right',
+    );
     _notify();
   }
 
@@ -368,7 +424,7 @@ class CompareController extends ChangeNotifier {
     if (digit == null) return false;
     if (pendingNibble == null) {
       pendingNibble = digit;
-      status = 'Enter second hex digit: ${character.toUpperCase()}_';
+      _setStatus(CompareStatus.enterSecondHexDigit, character.toUpperCase());
       _notify();
       return true;
     }
@@ -388,7 +444,7 @@ class CompareController extends ChangeNotifier {
     } else {
       edits[at] = value;
     }
-    status = 'Edited 0x${at.toRadixString(16).toUpperCase()}';
+    _setStatus(CompareStatus.edited, at.toRadixString(16).toUpperCase());
     final size = (selectedLeft ? left : right)!.stamp.size;
     selected = math.min(size - 1, at + 1);
     unawaited(
@@ -402,7 +458,7 @@ class CompareController extends ChangeNotifier {
   void cancelPending() {
     if (pendingNibble == null) return;
     pendingNibble = null;
-    status = 'Hex input canceled';
+    _setStatus(CompareStatus.hexInputCanceled);
     _notify();
   }
 
@@ -415,12 +471,12 @@ class CompareController extends ChangeNotifier {
   }) async {
     final file = isLeft ? left : right;
     if (file == null) {
-      return const SaveResult(SaveOutcome.failed, 'No file is open.');
+      return const SaveResult(SaveOutcome.failed, error: SaveError.noFileOpen);
     }
     if (_saving || (isLeft ? leftSaving : rightSaving)) {
       return const SaveResult(
         SaveOutcome.failed,
-        'A save is already in progress.',
+        error: SaveError.saveInProgress,
       );
     }
     _saving = true;
@@ -430,13 +486,16 @@ class CompareController extends ChangeNotifier {
       rightSaving = true;
     }
     _notify();
-    var result = const SaveResult(SaveOutcome.failed, 'Unable to start save.');
+    var result = const SaveResult(
+      SaveOutcome.failed,
+      error: SaveError.couldNotStart,
+    );
     try {
       final other = isLeft ? right : left;
       if (other != null && await _sameFile(destination, other.path)) {
         return const SaveResult(
           SaveOutcome.failed,
-          'The other pane already has this file open. Choose another destination.',
+          error: SaveError.otherPaneHasDestination,
         );
       }
       try {
@@ -466,7 +525,11 @@ class CompareController extends ChangeNotifier {
           destinationSnapshot: destinationSnapshot,
         );
       } catch (error) {
-        result = SaveResult(SaveOutcome.failed, 'Unable to save file: $error');
+        result = SaveResult(
+          SaveOutcome.failed,
+          error: SaveError.saveFailed,
+          detail: error.toString(),
+        );
       }
       if (result.outcome == SaveOutcome.saved) {
         try {
@@ -478,19 +541,17 @@ class CompareController extends ChangeNotifier {
               await File(destination).resolveSymbolicLinks()) {
             result = const SaveResult(
               SaveOutcome.savedButCouldNotReopen,
-              'The file was saved, but could not be reopened.',
+              error: SaveError.savedButCouldNotReopen,
             );
           } else {
-            status = 'Saved ${p.basename(destination)}';
+            _setStatus(CompareStatus.saved, p.basename(destination));
           }
         } catch (_) {
           result = const SaveResult(
             SaveOutcome.savedButCouldNotReopen,
-            'The file was saved, but could not be reopened.',
+            error: SaveError.savedButCouldNotReopen,
           );
         }
-      } else if (result.message != null) {
-        error = result.message;
       }
       return result;
     } finally {
@@ -508,7 +569,7 @@ class CompareController extends ChangeNotifier {
     if (at < 0 || at >= length) return;
     selected = at;
     if (!busy) {
-      status = 'Offset 0x${at.toRadixString(16).toUpperCase()}';
+      _setStatus(CompareStatus.offset, at.toRadixString(16).toUpperCase());
     }
     if (at >= ((selectedLeft ? left : right)?.stamp.size ?? 0)) {
       selectedLeft = !selectedLeft;
@@ -535,7 +596,11 @@ class CompareController extends ChangeNotifier {
       return;
     }
     busy = true;
-    status = forward == null ? 'Comparing files…' : 'Finding difference…';
+    _setStatus(
+      forward == null
+          ? CompareStatus.comparing
+          : CompareStatus.findingDifference,
+    );
     _notify();
     final port = ReceivePort();
     _port = port;
@@ -566,27 +631,33 @@ class CompareController extends ChangeNotifier {
             diffBytes = m['bytes'] as int;
             diffRuns = m['runs'] as int;
             elapsedMs = m['milliseconds'] as int;
-            status = diffBytes == 0
-                ? 'Comparison complete · Files are identical'
-                : 'Comparison complete';
+            _setStatus(
+              diffBytes == 0
+                  ? CompareStatus.filesIdentical
+                  : CompareStatus.comparisonComplete,
+            );
           } else {
             final target = m['target'] as int?;
             if (target == null) {
-              status = forward
-                  ? 'No later differences'
-                  : 'No earlier differences';
+              _setStatus(
+                forward
+                    ? CompareStatus.noLaterDifferences
+                    : CompareStatus.noEarlierDifferences,
+              );
             } else {
               jump(target);
-              status =
-                  'Differences 0x${target.toRadixString(16).toUpperCase()}';
+              _setStatus(
+                CompareStatus.differenceAt,
+                target.toRadixString(16).toUpperCase(),
+              );
             }
           }
         case 'error':
           busy = false;
           invalid = true;
           complete = false;
-          error = m['message'] as String;
-          status = 'Comparison error · Reopen the files';
+          _report(CompareError.comparisonFailed, m['message'] as String);
+          _setStatus(CompareStatus.comparisonError);
         case 'canceled':
           busy = false;
       }
@@ -622,8 +693,8 @@ class CompareController extends ChangeNotifier {
       _workerClosed = null;
       if (generation == _generation && !_disposed) {
         await _stop(notify: false);
-        error = e.toString();
-        status = 'Unable to start comparison';
+        _report(CompareError.comparisonFailed, e.toString());
+        _setStatus(CompareStatus.comparisonStartFailed);
         _notify();
       }
     }
@@ -661,7 +732,7 @@ class CompareController extends ChangeNotifier {
     _port = null;
     if (busy) {
       busy = false;
-      status = 'Canceled · Visible differences remain available';
+      _setStatus(CompareStatus.canceled);
     }
     if (notify) _notify();
   }

@@ -1,0 +1,211 @@
+{
+  "@@locale": "en",
+  "languageLoadFailed": "The saved language preference could not be read. System language is in use.",
+  "languageSaveFailed": "The language preference could not be saved.",
+  "openLeft": "Open Left",
+  "openRight": "Open Right",
+  "previousDiff": "Previous Diff",
+  "nextDiff": "Next Diff",
+  "goToOffset": "Go to Offset",
+  "bytesPerRow": "{count} B/row",
+  "@bytesPerRow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "compareAgain": "Compare Again",
+  "save": "Save",
+  "cancel": "Cancel",
+  "discard": "Discard",
+  "overwrite": "Overwrite",
+  "go": "Go",
+  "retry": "Retry",
+  "left": "Left",
+  "right": "Right",
+  "noFile": "No file",
+  "noFileSelected": "No file selected",
+  "calculating": "Calculating…",
+  "unavailable": "Unavailable",
+  "desktopUnavailable": "Desktop integration is not available.",
+  "dropTooManyFiles": "Drop exactly one file at a time.",
+  "dropNotFinderFile": "Only files from Finder can be dropped here.",
+  "dropNotReadableFile": "The dropped item is not a readable file.",
+  "dropCouldNotOpen": "Unable to open the dropped file.",
+  "dropOnPane": "Drop the file on the left or right binary pane.",
+  "@dropOnPane": {
+    "description": "Instruction for a file that missed both panes."
+  },
+  "statusOpenTwoFiles": "Open two files to compare",
+  "statusOneFilePreview": "One file open · Read-only preview",
+  "statusReadError": "Read error · Reopen the file",
+  "statusComparisonError": "Comparison error · Reopen the files",
+  "statusComparing": "Comparing files…",
+  "statusFindingDifference": "Finding difference…",
+  "statusComparisonComplete": "Comparison complete",
+  "statusFilesIdentical": "Comparison complete · Files are identical",
+  "statusNoLaterDifferences": "No later differences",
+  "statusNoEarlierDifferences": "No earlier differences",
+  "statusCanceled": "Canceled · Visible differences remain available",
+  "statusEditingEnabled": "{side} editing enabled",
+  "@statusEditingEnabled": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "statusEditingDisabled": "{side} editing disabled",
+  "@statusEditingDisabled": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "statusEnterSecondHexDigit": "Enter second hex digit: {digit}_",
+  "@statusEnterSecondHexDigit": {
+    "placeholders": {
+      "digit": {}
+    }
+  },
+  "statusEdited": "Edited 0x{offset}",
+  "@statusEdited": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusHexInputCanceled": "Hex input canceled",
+  "statusSaved": "Saved {name}",
+  "@statusSaved": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusOffset": "Offset 0x{offset}",
+  "@statusOffset": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusDifferenceAt": "Difference at 0x{offset}",
+  "@statusDifferenceAt": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusComparisonStartFailed": "Unable to start comparison",
+  "hexPaneNotCompared": "not compared",
+  "hexPaneEqual": "equal",
+  "hexPaneDifferent": "different",
+  "hexPaneSelectedByte": "Offset {offset}, value {value}, {comparison}",
+  "@hexPaneSelectedByte": {
+    "placeholders": {
+      "offset": {},
+      "value": {},
+      "comparison": {}
+    }
+  },
+  "hexPaneEditingEnabled": "editing enabled",
+  "hexPaneEditingDisabled": "editing disabled",
+  "hexPaneSemantics": "{side} binary pane, {editing}. {selected}",
+  "@hexPaneSemantics": {
+    "placeholders": {
+      "side": {},
+      "editing": {},
+      "selected": {}
+    }
+  },
+  "hexPaneOffsetHeader": "OFFSET",
+  "hexPaneAsciiHeader": "ASCII",
+  "hexPaneDragFileHereToOpen": "Drag file here to open",
+  "hexPaneFileEmpty": "This file is empty",
+  "desktopInitializationFailed": "Desktop integration could not be initialized.",
+  "saveChangesToFile": "Save changes to the {side} file?",
+  "@saveChangesToFile": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "discardEditsWarning": "Unsaved edits will be lost if you discard them.",
+  "openFileFailed": "Unable to open file.",
+  "readFileFailed": "Unable to read file.",
+  "comparisonFailed": "Comparison failed.",
+  "fileChangedOutsideApp": "File changed outside the app",
+  "overwriteChangedFilePrompt": "Overwrite the externally changed file with the current edited content?",
+  "destinationChangedSaveAs": "The destination changed outside the app. Choose Save As again.",
+  "saveFileFailed": "Unable to save file.",
+  "saveNoFileOpen": "No file is open.",
+  "saveInProgress": "A save is already in progress.",
+  "saveOtherPaneHasDestination": "The other pane already has this file open. Choose another destination.",
+  "saveCouldNotStart": "Unable to start save.",
+  "saveNoBackend": "No safe save backend is available for this platform.",
+  "saveDestinationDirectoryMissing": "The destination directory does not exist.",
+  "saveInstallationAmbiguous": "The save result is ambiguous. A recovery copy was retained.",
+  "saveInstallationFailed": "Unable to install the saved file.",
+  "saveSavedButCouldNotReopen": "The file was saved, but could not be reopened.",
+  "invalidHexOffset": "Enter a hexadecimal offset within the file",
+  "hexOffsetHint": "Hex offset (e.g. 400 or 0x400)",
+  "fileDropTarget": "{side} file drop target. Drop one binary file to open it on the {side}.",
+  "@fileDropTarget": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "paneFileLabel": "{side} · {name}",
+  "@paneFileLabel": {
+    "placeholders": {
+      "side": {},
+      "name": {}
+    }
+  },
+  "chooseOpen": "Choose Open {side}",
+  "@chooseOpen": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "fileSizeDetails": "{size} · {bytes} bytes",
+  "@fileSizeDetails": {
+    "placeholders": {
+      "size": {},
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "editingOn": "Edit ON",
+  "editingOff": "Edit OFF",
+  "savePane": "Save {side}",
+  "@savePane": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "savePaneAs": "Save {side} As",
+  "@savePaneAs": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "hashPaneLabel": "{side}: ",
+  "@hashPaneLabel": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "openingBlockedBySave": "A save is in progress. Wait before opening another file.",
+  "alreadyOpenInOtherPane": "This file is already open in the other pane. Open a copy to edit it independently.",
+  "error": "Error",
+  "hash": "Hash",
+  "sameOffsetComparison": "Same-offset comparison",
+  "updateAvailable": "Update {version} available",
+  "@updateAvailable": {"placeholders": {"version": {}}},
+  "updateDownload": "Download",
+  "updateViewRelease": "View release",
+  "binaryFiles": "Binary files",
+  "differenceSummary": "{label} {bytes} bytes / {ranges} ranges",
+  "@differenceSummary": {"placeholders": {"label": {}, "bytes": {"type": "int"}, "ranges": {"type": "int"}}},
+  "differences": "Differences",
+  "foundSoFar": "Found so far",
+  "selectedOffset": "{side} 0x{offset}",
+  "@selectedOffset": {"placeholders": {"side": {}, "offset": {}}},
+  "differenceLegend": "Red: different · Orange: one side only"
+}

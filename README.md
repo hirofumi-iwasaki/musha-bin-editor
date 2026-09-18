@@ -4,11 +4,17 @@ A side-by-side hexadecimal binary viewer and comparison app for macOS, Windows a
 
 Repository: [hirofumi-iwasaki/musha-bin-editor](https://github.com/hirofumi-iwasaki/musha-bin-editor)
 
-Version 0.6.0 applies the approved Mushagaeshi artwork to macOS, Windows and Linux. macOS uses the complete AppIcon image set, Windows embeds a multi-resolution `.ico`, and Linux packages the GTK window icon together with standard desktop-entry and hicolor icon-theme assets. The transparent source artwork is retained at `design/icons/mushagaeshi-icon-concept-v1.png`.
+Version 0.7.0 adds a Japanese interface, automatic Japanese/English selection, and a persistent language selector. It does not change binary data, comparison, editing, or save behavior.
 
-## v0.6.0 release status
+## UI language support
 
-The listed GitHub Actions builds and Parallels acceptance results are historical v0.4.0 evidence. The v0.6.0 native build, package and platform acceptance matrix remains pending. These results do not cover every native failure path or GUI scenario; detailed cross-version desktop acceptance remains separate from CI compilation.
+**Language / 言語** at the top left offers **System / システム**, **English**, and **日本語**. A manual selection updates the interface immediately and is restored at the next launch. System mode uses only the first operating-system preferred language: `ja` (including a regional Japanese locale) uses Japanese and every other primary language uses English. A Japanese fallback later in the OS list does not switch the app to Japanese.
+
+Changing a manual selection does not replace open files, unsaved edits, the current offset, or an active comparison. macOS application-menu titles follow the selected app language. Native file-picker and Services chrome remain controlled by macOS and can stay in the OS language.
+
+## v0.7.0 release status
+
+The listed GitHub Actions builds and Parallels acceptance results are historical v0.4.0 evidence. The v0.7.0 native build, package and platform acceptance matrix remains pending. These results do not cover every native failure path or GUI scenario; detailed cross-version desktop acceptance remains separate from CI compilation.
 
 Windows/Linux use Ctrl instead of Command for the shortcuts listed below. Their file dialogs, pane drops and window close requests are routed through desktop adapters. Hexadecimal geometry and glyph rendering share measured font metrics, including enlarged text.
 
@@ -63,7 +69,7 @@ Select **Open Left** and **Open Right** to compare files, or drop one Finder fil
 - Save and Save As, with staged native replacement and external-change confirmation
 - Save / Discard / Cancel protection when replacing an edited file or closing the window
 - Comparison progress, cancellation, re-comparison and external-change detection
-- English controls, status messages, dialogs and accessibility labels
+- Japanese and English controls, status messages, dialogs and accessibility labels
 
 The extra in-content title row has been removed to leave more space for binary data. The application name remains in the native macOS title bar and application menu.
 
@@ -86,13 +92,13 @@ The hash bar reports the saved file contents on disk. Select **SHA-1** or **MD5*
 
 ## GitHub Actions builds
 
-The **Desktop build and package** workflow runs on pushes to `release/0.6.0`, on pull requests, and through `workflow_dispatch`. It builds Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64 and macOS Arm64 using native runners and pinned Flutter 3.47.4. Every job performs dependency resolution, static analysis, tests, a Release build, architecture inspection and artifact upload.
+The **Desktop build and package** workflow runs on pushes to `release/0.7.0`, on pull requests, and through `workflow_dispatch`. It builds Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64 and macOS Arm64 using native runners and pinned Flutter 3.47.4. Every job performs dependency resolution, static analysis, tests, a Release build, architecture inspection and artifact upload.
 
 Open the workflow run and download the desired package from **Artifacts**. Ubuntu artifact names include the build OS version; use the oldest supported build baseline for wider compatibility. Downloaded Actions artifacts contain the application distribution ZIP/tar.gz. Manual dispatch availability in GitHub's UI depends on the workflow being present on the default branch after merge.
 
-The v0.6.0 GitHub Release must contain five binary assets: `musha-bin-edit-windows-x64.zip`, `musha-bin-edit-windows-arm64.zip`, `musha-bin-edit-linux-x64.tar.gz`, `musha-bin-edit-linux-arm64.tar.gz` (both built on the Ubuntu 22.04 baseline), and `musha-bin-edit-macos.zip`. These exact names are the update checker's compatibility contract. It does not include a separate source ZIP; each binary archive includes `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `THIRD_PARTY_LICENSES/`, and `SOURCE_AND_BUILD.txt` with the corresponding source revision and build reference.
+The v0.7.0 GitHub Release must contain five binary assets: `musha-bin-edit-windows-x64.zip`, `musha-bin-edit-windows-arm64.zip`, `musha-bin-edit-linux-x64.tar.gz`, `musha-bin-edit-linux-arm64.tar.gz` (both built on the Ubuntu 22.04 baseline), and `musha-bin-edit-macos.zip`. These exact names are the update checker's compatibility contract. It does not include a separate source ZIP; each binary archive includes `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `THIRD_PARTY_LICENSES/`, and `SOURCE_AND_BUILD.txt` with the corresponding source revision and build reference.
 
-The earlier seven-platform run predates this release branch. The v0.6.0 release candidate must rerun the full matrix with version 0.6.0 build 6 before publication.
+The earlier seven-platform run predates this release branch. The v0.7.0 release candidate must rerun the full matrix with version 0.7.0 build 7 before publication.
 
 ## Development and packaging
 

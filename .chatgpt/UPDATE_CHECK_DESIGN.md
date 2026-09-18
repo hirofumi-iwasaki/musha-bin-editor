@@ -7,10 +7,10 @@ application. It does not download, install, or apply updates. The update check
 must never delay startup, opening files, comparison, editing, saving, or
 shutdown.
 
-The baseline is `release/0.5.0` at `506bda6`. The public repository is
-`hirofumi-iwasaki/musha-bin-editor`. The current application version is
-`0.4.0+4` in `pubspec.yaml`; the `0.5.0` release must first set the release
-version there, so the runtime version and the release tag can be compared.
+This design was introduced on `release/0.5.0` at `506bda6`. The public
+repository is `hirofumi-iwasaki/musha-bin-editor`. The current working branch
+is `release/0.7.0`, and `pubspec.yaml` is `0.7.0+7`; package metadata remains
+the runtime version source used for release-tag comparison.
 
 ## Decision record (ADR-UC-001)
 
@@ -266,6 +266,6 @@ These do not block the design or the release branch:
 
 ## Implementation record (2026-09-15)
 
-Implemented on `release/0.5.0` with package metadata from `package_info_plus`, a bounded `dart:io` HTTPS client, `shared_preferences` state, and `url_launcher` behind injected interfaces. The check starts after the first frame, uses the documented 5-second/1 MiB limits, cache cadence and backoff, selects only uploaded exact-name assets for the current Dart FFI process ABI, and keeps automatic failures silent. Status-row links are user-click-only and validate HTTPS GitHub release/asset URLs before launching. Both macOS sandbox entitlement files now grant outbound network client access. `pubspec.yaml` is `0.5.0+5`, and CI targets `release/0.5.0`.
+Implemented originally on `release/0.5.0` with package metadata from `package_info_plus`, a bounded `dart:io` HTTPS client, `shared_preferences` state, and `url_launcher` behind injected interfaces. The check starts after the first frame, uses the documented 5-second/1 MiB limits, cache cadence and backoff, selects only uploaded exact-name assets for the current Dart FFI process ABI, and keeps automatic failures silent. Status-row links are user-click-only and validate HTTPS GitHub release/asset URLs before launching. Both macOS sandbox entitlement files grant outbound network client access. For the current v0.7.0 localization branch, `pubspec.yaml` is `0.7.0+7` and CI targets `release/0.7.0`.
 
 Unit and widget tests cover stable parsing, asset/release-page selection, ETag behavior, no-cache 304 recovery, timeout cancellation, disposal/concurrency guards, preference failures, cache invalidation/restoration, rate-limit backoff, disabled/cadence behavior, and status-link launch. Static analysis and 40 Flutter tests passed. Native clean-host behavior and a published-release smoke test remain release validation work.

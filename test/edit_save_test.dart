@@ -84,7 +84,8 @@ void main() {
     expect(controller.inputHex('0'), isFalse);
     await controller.open(other.path, false);
     expect(controller.right, isNull);
-    expect(controller.error, contains('save is in progress'));
+    expect(controller.errorCode, CompareError.openingBlockedBySave);
+    expect(controller.error, isNull);
     release.complete();
     expect((await saving).outcome, SaveOutcome.saved);
     controller.dispose();
@@ -118,7 +119,8 @@ void main() {
     await opening;
 
     expect(controller.path(true), await source.resolveSymbolicLinks());
-    expect(controller.error, contains('save is in progress'));
+    expect(controller.errorCode, CompareError.openingBlockedBySave);
+    expect(controller.error, isNull);
     release.complete();
     await saving;
     controller.dispose();
@@ -301,7 +303,8 @@ void main() {
     await controller.open(source.path, true);
     await controller.open(source.path, false);
     expect(controller.right, isNull);
-    expect(controller.error, contains('already open in the other pane'));
+    expect(controller.errorCode, CompareError.alreadyOpenInOtherPane);
+    expect(controller.error, isNull);
     controller.dispose();
   });
 
@@ -317,7 +320,8 @@ void main() {
       await controller.open(source.path, true);
       await controller.open(alias, false);
       expect(controller.right, isNull);
-      expect(controller.error, contains('already open in the other pane'));
+      expect(controller.errorCode, CompareError.alreadyOpenInOtherPane);
+      expect(controller.error, isNull);
       controller.dispose();
     },
     skip: Platform.isWindows

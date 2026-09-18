@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../core/comparison.dart';
+import '../l10n/app_localizations.dart';
 
 const hexRowHeight = 25.0;
 const hexHeaderHeight = 30.0;
@@ -34,10 +35,7 @@ class HexMetrics {
     return HexMetrics(
       painter.width,
       painter.height,
-      math.max(
-        hexRowHeight * unitScale,
-        painter.height + 8 * unitScale,
-      ),
+      math.max(hexRowHeight * unitScale, painter.height + 8 * unitScale),
       hexHeaderHeight * unitScale,
       textScaler,
       unitScale,
@@ -65,7 +63,9 @@ class HexLayout {
   final double width;
   final HexMetrics metrics;
   double get hexStart =>
-      18 * metrics.unitScale + digits * metrics.glyphWidth + 20 * metrics.unitScale;
+      18 * metrics.unitScale +
+      digits * metrics.glyphWidth +
+      20 * metrics.unitScale;
   double get cell => metrics.hexCell;
   double x(int col) =>
       hexStart + col * cell + (col ~/ 8) * 9 * metrics.unitScale;
@@ -118,6 +118,7 @@ class HexPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final digits = math.max(
       8,
       math.max(0, totalSize - 1).toRadixString(16).length,
@@ -133,16 +134,27 @@ class HexPane extends StatelessWidget {
               isLeft ? (i < other.length ? other[i] : null) : bytes[i],
             )
           : null;
+      final comparison = d == null
+          ? l10n?.hexPaneNotCompared ?? 'not compared'
+          : d == ByteDifference.equal
+          ? l10n?.hexPaneEqual ?? 'equal'
+          : l10n?.hexPaneDifferent ?? 'different';
       selectedLabel =
-          ' Offset ${selected!.toRadixString(16)}, value ${bytes[i].toRadixString(16).padLeft(2, '0')}, ${d == null
-              ? 'Not compared'
-              : d == ByteDifference.equal
-              ? 'Equal'
-              : 'Different'}';
+          l10n?.hexPaneSelectedByte(
+            selected!.toRadixString(16).toUpperCase(),
+            bytes[i].toRadixString(16).padLeft(2, '0').toUpperCase(),
+            comparison,
+          ) ??
+          'Offset ${selected!.toRadixString(16).toUpperCase()}, value ${bytes[i].toRadixString(16).padLeft(2, '0').toUpperCase()}, $comparison';
     }
     return Semantics(
       label:
-          '${isLeft ? 'Left' : 'Right'} hexadecimal view. ${editing ? 'Editing enabled.' : 'Editing disabled.'} $selectedLabel',
+          l10n?.hexPaneSemantics(
+            isLeft ? l10n.left : l10n.right,
+            editing ? l10n.hexPaneEditingEnabled : l10n.hexPaneEditingDisabled,
+            selectedLabel,
+          ) ??
+          '${isLeft ? 'Left' : 'Right'} binary pane, ${editing ? 'editing enabled' : 'editing disabled'}. $selectedLabel',
       focusable: true,
       child: Focus(
         focusNode: focusNode,
@@ -181,7 +193,8 @@ class HexPane extends StatelessWidget {
                       focusNode.requestFocus();
                       final col = layout.column(event.localPosition.dx);
                       final row =
-                          ((event.localPosition.dy - layout.metrics.headerHeight) /
+                          ((event.localPosition.dy -
+                                      layout.metrics.headerHeight) /
                                   layout.metrics.rowHeight)
                               .floor();
                       if (col != null && row >= 0 && !loading && !invalid) {
@@ -205,17 +218,30 @@ class HexPane extends StatelessWidget {
                           selected: selected,
                           edited: edited,
                           dark: Theme.of(context).brightness == Brightness.dark,
+                          offsetHeader: l10n?.hexPaneOffsetHeader ?? 'OFFSET',
+                          asciiHeader: l10n?.hexPaneAsciiHeader ?? 'ASCII',
                         ),
                         child: !hasFile
-                            ? const Center(
-                                child: Text('Drag file here to open'),
+                            ? Center(
+                                child: Text(
+                                  l10n?.hexPaneDragFileHereToOpen ??
+                                      'Drag file here to open',
+                                ),
                               )
                             : invalid
-                            ? const Center(
-                                child: Text('Read error · Reopen the file'),
+                            ? Center(
+                                child: Text(
+                                  l10n?.statusReadError ??
+                                      'Read error · Reopen the file',
+                                ),
                               )
                             : size == 0 && !hasOther
-                            ? const Center(child: Text('This file is empty'))
+                            ? Center(
+                                child: Text(
+                                  l10n?.hexPaneFileEmpty ??
+                                      'This file is empty',
+                                ),
+                              )
                             : null,
                       ),
                     ),
@@ -246,11 +272,14 @@ class HexPainter extends CustomPainter {
     required this.selected,
     required this.edited,
     required this.dark,
+    required this.offsetHeader,
+    required this.asciiHeader,
   });
   final Uint8List bytes, other;
   final int offset, size, totalSize;
   final HexLayout layout;
   final bool isLeft, hasFile, hasOther, loading, invalid, dark;
+  final String offsetHeader, asciiHeader;
   final int? selected;
   final Set<int> edited;
 
@@ -283,7 +312,7 @@ class HexPainter extends CustomPainter {
       rowPaint,
     );
     draw(
-      'OFFSET',
+      offsetHeader,
       18 * layout.metrics.unitScale,
       7 * layout.metrics.unitScale,
       muted,
@@ -299,7 +328,7 @@ class HexPainter extends CustomPainter {
       );
     }
     draw(
-      'ASCII',
+      asciiHeader,
       layout.asciiStart,
       7 * layout.metrics.unitScale,
       muted,
@@ -390,7 +419,10 @@ class HexPainter extends CustomPainter {
           );
           if (edited.contains(at) && value != null) {
             canvas.drawLine(
-              Offset(x, y + layout.metrics.rowHeight - 3 * layout.metrics.unitScale),
+              Offset(
+                x,
+                y + layout.metrics.rowHeight - 3 * layout.metrics.unitScale,
+              ),
               Offset(
                 x + layout.cell - 4 * layout.metrics.unitScale,
                 y + layout.metrics.rowHeight - 3 * layout.metrics.unitScale,
@@ -441,7 +473,9 @@ class HexPainter extends CustomPainter {
       old.invalid != invalid ||
       old.hasFile != hasFile ||
       old.hasOther != hasOther ||
-      old.totalSize != totalSize;
+      old.totalSize != totalSize ||
+      old.offsetHeader != offsetHeader ||
+      old.asciiHeader != asciiHeader;
 }
 
 /// Bounded cache shared by both panes. Repeated HEX/ASCII glyphs are laid out
@@ -450,7 +484,12 @@ final _glyphs = _GlyphCache();
 
 class _GlyphCache {
   final _entries = <(String, Color, double, TextScaler), TextPainter>{};
-  TextPainter get(String text, Color color, double size, TextScaler textScaler) {
+  TextPainter get(
+    String text,
+    Color color,
+    double size,
+    TextScaler textScaler,
+  ) {
     final key = (text, color, size, textScaler);
     var painter = _entries.remove(key);
     painter ??= TextPainter(

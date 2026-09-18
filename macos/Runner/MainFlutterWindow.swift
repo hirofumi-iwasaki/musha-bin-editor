@@ -53,17 +53,17 @@ private final class FileDropHostView: NSView {
     defer { channel?.invokeMethod("fileDragExited", arguments: nil) }
     let urls = URLs(sender)
     guard urls.count == 1 else {
-      channel?.invokeMethod("fileDropError", arguments: ["message": "Drop exactly one file at a time."])
+      channel?.invokeMethod("fileDropError", arguments: ["code": "tooManyFiles"])
       return false
     }
     let url = urls[0]
     guard url.isFileURL else {
-      channel?.invokeMethod("fileDropError", arguments: ["message": "Only files from Finder can be dropped here."])
+      channel?.invokeMethod("fileDropError", arguments: ["code": "notFinderFile"])
       return false
     }
     var isDirectory: ObjCBool = false
     guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
-      channel?.invokeMethod("fileDropError", arguments: ["message": "The dropped item is not a readable file."])
+      channel?.invokeMethod("fileDropError", arguments: ["code": "notReadableFile"])
       return false
     }
     let location = point(sender)
@@ -77,8 +77,32 @@ private final class FileDropHostView: NSView {
 
 class MainFlutterWindow: NSWindow, NSWindowDelegate {
   private var channel: FlutterMethodChannel?
+  private var languageChannel: FlutterMethodChannel?
   private var accessURLs: [String: URL] = [:]
   private var allowClose = false
+  private var language = "en"
+
+  private var usesJapanese: Bool { language == "ja" }
+
+  private func paneName(_ side: String) -> String {
+    if usesJapanese {
+      return side == "right" ? "右" : "左"
+    }
+    return side == "right" ? "Right" : "Left"
+  }
+
+  private func openPanelTitle(for side: String) -> String {
+    let pane = paneName(side)
+    return usesJapanese ? "\(pane)のバイナリファイルを開く" : "Open \(pane) Binary File"
+  }
+
+  private func savePanelTitle(for side: String) -> String {
+    let pane = paneName(side)
+    return usesJapanese ? "\(pane)のバイナリファイルに名前を付けて保存" : "Save \(pane) Binary File As"
+  }
+
+  private var openPanelPrompt: String { usesJapanese ? "開く" : "Open" }
+  private var savePanelPrompt: String { usesJapanese ? "保存" : "Save" }
 
   override func awakeFromNib() {
     let controller = FlutterViewController()
@@ -98,6 +122,20 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     RegisterGeneratedPlugins(registry: controller)
     channel = FlutterMethodChannel(name: "mushagaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
     host.channel = channel
+    languageChannel = FlutterMethodChannel(
+      name: "mushagaeshi/language",
+      binaryMessenger: controller.engine.binaryMessenger
+    )
+    languageChannel?.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "setLanguage", let language = call.arguments as? String,
+            language == "en" || language == "ja" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      self?.language = language
+      (NSApp.delegate as? AppDelegate)?.setMenuLanguage(language)
+      result(nil)
+    }
     channel?.setMethodCallHandler { [weak self] call, result in
       guard let self = self else {
         result(FlutterMethodNotImplemented)
@@ -111,10 +149,10 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
       }
       if call.method == "saveFile" {
         let arguments = call.arguments as? [String: String]
-        let side = arguments?["side"] ?? "File"
+        let side = arguments?["side"] ?? "left"
         let panel = NSSavePanel()
-        panel.title = "Save \(side) Binary File As"
-        panel.prompt = "Save"
+        panel.title = self.savePanelTitle(for: side)
+        panel.prompt = self.savePanelPrompt
         panel.nameFieldStringValue = arguments?["name"] ?? "binary.bin"
         panel.beginSheetModal(for: self) { response in
           guard response == .OK, let url = panel.url else { result(nil); return }
@@ -155,10 +193,10 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
         result(FlutterMethodNotImplemented)
         return
       }
-      let side = (call.arguments as? [String: String])?["side"] ?? "Left"
+      let side = (call.arguments as? [String: String])?["side"] ?? "left"
       let panel = NSOpenPanel()
-      panel.title = "Open \(side) Binary File"
-      panel.prompt = "Open"
+      panel.title = self.openPanelTitle(for: side)
+      panel.prompt = self.openPanelPrompt
       panel.canChooseDirectories = false
       panel.canChooseFiles = true
       panel.allowsMultipleSelection = false

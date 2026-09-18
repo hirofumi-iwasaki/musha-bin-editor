@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/scheduler.dart';
 
@@ -13,47 +14,163 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:path/path.dart' as path;
 
 import 'application/compare_controller.dart';
+import 'application/language_controller.dart';
 import 'infrastructure/file_hash.dart';
+import 'infrastructure/settings/language_preferences.dart';
+import 'l10n/app_localizations.dart';
+import 'l10n/app_localizations_en.dart';
 import 'infrastructure/safe_save.dart';
 import 'presentation/hex_pane.dart';
+import 'presentation/widgets/language_selector.dart';
 import 'platform/desktop_platform.dart';
 import 'update/update_check.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final desktop = createDesktopPlatform();
-  runApp(MushagaeshiBinaryEditorApp(desktop: desktop));
+  final language = LanguageController(preferences: SharedLanguagePreferences());
+  await language.load();
+  runApp(MushagaeshiBinaryEditorApp(desktop: desktop, language: language));
 }
 
-class MushagaeshiBinaryEditorApp extends StatelessWidget {
+class MushagaeshiBinaryEditorApp extends StatefulWidget {
   const MushagaeshiBinaryEditorApp({
     super.key,
     this.desktop,
     this.updateChecker,
+    this.language,
+    this.controller,
   });
   final DesktopPlatform? desktop;
   final UpdateCheckController? updateChecker;
+  final LanguageController? language;
+  final CompareController? controller;
+
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Mushagaeshi Binary Editor',
-    locale: const Locale('en'),
-    supportedLocales: const [Locale('en')],
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF315EA8)),
-      useMaterial3: true,
-      scaffoldBackgroundColor: const Color(0xFFFFFFFF),
-    ),
-    darkTheme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF7BA6ED),
-        brightness: Brightness.dark,
+  State<MushagaeshiBinaryEditorApp> createState() =>
+      _MushagaeshiBinaryEditorAppState();
+}
+
+class _MushagaeshiBinaryEditorAppState extends State<MushagaeshiBinaryEditorApp>
+    with WidgetsBindingObserver {
+  late final LanguageController language =
+      widget.language ?? LanguageController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    if (language.selection == AppLanguage.system) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    language.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => LanguageScope(
+    controller: language,
+    child: ListenableBuilder(
+      listenable: language,
+      builder: (context, _) => MaterialApp(
+        title: 'Mushagaeshi Binary Editor',
+        locale: resolveAppLocale(
+          language.selection,
+          WidgetsBinding.instance.platformDispatcher.locales,
+        ),
+        localeListResolutionCallback: (_, supported) => resolveAppLocale(
+          language.selection,
+          WidgetsBinding.instance.platformDispatcher.locales,
+        ),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF315EA8)),
+          useMaterial3: true,
+          scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+        ),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF7BA6ED),
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+          scaffoldBackgroundColor: const Color(0xFF191E26),
+        ),
+        builder: (context, child) => _NativeMenuLanguage(
+          child: Column(
+            children: [
+              if (language.failure != null)
+                Material(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        language.failure == LanguagePreferenceFailure.load
+                            ? AppLocalizations.of(context)!.languageLoadFailed
+                            : AppLocalizations.of(context)!.languageSaveFailed,
+                      ),
+                    ),
+                  ),
+                ),
+              Expanded(child: child!),
+            ],
+          ),
+        ),
+        home: CompareWindow(
+          controller: widget.controller,
+          desktop: widget.desktop,
+          updateChecker: widget.updateChecker,
+        ),
       ),
-      useMaterial3: true,
-      scaffoldBackgroundColor: const Color(0xFF191E26),
     ),
-    home: CompareWindow(desktop: desktop, updateChecker: updateChecker),
   );
+}
+
+class _NativeMenuLanguage extends StatefulWidget {
+  const _NativeMenuLanguage({required this.child});
+  final Widget child;
+
+  @override
+  State<_NativeMenuLanguage> createState() => _NativeMenuLanguageState();
+}
+
+class _NativeMenuLanguageState extends State<_NativeMenuLanguage> {
+  String? _last;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final code = Localizations.localeOf(context).languageCode;
+    if (_last != code) {
+      _last = code;
+      if (Platform.isMacOS) unawaited(_update(code));
+    }
+  }
+
+  Future<void> _update(String code) async {
+    try {
+      await const MethodChannel('mushagaeshi/language')
+          .invokeMethod<void>('setLanguage', code);
+    } on MissingPluginException {
+      // Widget tests and older development runners have no native menu bridge.
+    } on PlatformException catch (error) {
+      debugPrint('Native menu localization failed: ${error.code}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class CompareWindow extends StatefulWidget {
@@ -140,7 +257,8 @@ class _CompareWindowState extends State<CompareWindow> {
       );
       if (mounted) {
         controller.reportError(
-          'Unable to initialize desktop integration: $error',
+          CompareError.desktopInitializationFailed,
+          detail: error.toString(),
         );
         setState(() {});
       }
@@ -152,8 +270,8 @@ class _CompareWindowState extends State<CompareWindow> {
     if (!_desktopInitialized || _desktopInitializationError != null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Desktop integration is not available.'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.desktopUnavailable),
           ),
         );
       }
@@ -219,9 +337,7 @@ class _CompareWindowState extends State<CompareWindow> {
           ? null
           : _dropSideAt(Offset(event.position!.x, event.position!.y));
       if (side == null) {
-        controller.reportError(
-          'Drop the file on the left or right binary pane.',
-        );
+        controller.reportError(CompareError.dropOnPane);
       } else {
         if (await _confirmReplace(side)) {
           await controller.open(event.path, side);
@@ -240,7 +356,14 @@ class _CompareWindowState extends State<CompareWindow> {
     } else if (event is DesktopDropExited) {
       if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
     } else if (event is DesktopDropError) {
-      controller.reportError(event.message);
+      final code = switch (event.code) {
+        DesktopDropErrorCode.tooManyFiles => CompareError.dropTooManyFiles,
+        DesktopDropErrorCode.notFinderFile => CompareError.dropNotFinderFile,
+        DesktopDropErrorCode.notReadableFile =>
+          CompareError.dropNotReadableFile,
+        DesktopDropErrorCode.couldNotOpen => CompareError.dropCouldNotOpen,
+      };
+      controller.reportError(code, detail: event.detail);
       if (hoveredDropLeft != null) setState(() => hoveredDropLeft = null);
     } else if (event is DesktopCloseRequested) {
       if (await _confirmBothDirty()) {
@@ -261,20 +384,26 @@ class _CompareWindowState extends State<CompareWindow> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text('Save changes to the ${left ? 'left' : 'right'} file?'),
-        content: const Text('Unsaved edits will be lost if you discard them.'),
+        title: Text(
+          AppLocalizations.of(context)!.saveChangesToFile(
+            left
+                ? AppLocalizations.of(context)!.left
+                : AppLocalizations.of(context)!.right,
+          ),
+        ),
+        content: Text(AppLocalizations.of(context)!.discardEditsWarning),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, 'cancel'),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, 'discard'),
-            child: const Text('Discard'),
+            child: Text(AppLocalizations.of(context)!.discard),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, 'save'),
-            child: const Text('Save'),
+            child: Text(AppLocalizations.of(context)!.save),
           ),
         ],
       ),
@@ -297,19 +426,26 @@ class _CompareWindowState extends State<CompareWindow> {
     if (picking) return;
     if (!await _waitForDesktopReady()) return;
     if (!await _confirmReplace(left)) return;
+    if (!mounted) return;
+    final binaryFiles = AppLocalizations.of(context)!.binaryFiles;
     setState(() => picking = true);
     try {
       final selectedPath = await desktop.openFile(
         left ? DesktopPane.left : DesktopPane.right,
+        binaryFiles,
       );
       if (selectedPath != null && mounted) {
         await controller.open(selectedPath, left);
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Unable to open file: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${AppLocalizations.of(context)!.openFileFailed}\n$error',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => picking = false);
@@ -338,18 +474,18 @@ class _CompareWindowState extends State<CompareWindow> {
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: const Text('File changed outside the app'),
-          content: const Text(
-            'Overwrite the externally changed file with the current edited content?',
+          title: Text(AppLocalizations.of(context)!.fileChangedOutsideApp),
+          content: Text(
+            AppLocalizations.of(context)!.overwriteChangedFilePrompt,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Overwrite'),
+              child: Text(AppLocalizations.of(context)!.overwrite),
             ),
           ],
         ),
@@ -366,16 +502,16 @@ class _CompareWindowState extends State<CompareWindow> {
     }
     if (result.outcome == SaveOutcome.destinationChanged && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'The destination changed outside the app. Choose Save As again.',
-          ),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.destinationChangedSaveAs),
         ),
       );
     }
     if (result.outcome == SaveOutcome.failed && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message ?? 'Unable to save file.')),
+        SnackBar(
+          content: Text(_saveErrorText(AppLocalizations.of(context)!, result)),
+        ),
       );
     }
     return result.outcome == SaveOutcome.saved;
@@ -399,7 +535,7 @@ class _CompareWindowState extends State<CompareWindow> {
             final at = int.tryParse(text, radix: 16);
             if (at == null || at < 0 || at >= controller.length) {
               update(
-                () => error = 'Enter a hexadecimal offset within the file',
+                () => error = AppLocalizations.of(context)!.invalidHexOffset,
               );
               return;
             }
@@ -407,14 +543,14 @@ class _CompareWindowState extends State<CompareWindow> {
           }
 
           return AlertDialog(
-            title: const Text('Go to Offset'),
+            title: Text(AppLocalizations.of(context)!.goToOffset),
             content: SizedBox(
               width: 360,
               child: TextField(
                 controller: input,
                 autofocus: true,
                 decoration: InputDecoration(
-                  labelText: 'Hex offset (e.g. 400 or 0x400)',
+                  labelText: AppLocalizations.of(context)!.hexOffsetHint,
                   errorText: error,
                 ),
                 onSubmitted: (_) => submit(),
@@ -423,9 +559,12 @@ class _CompareWindowState extends State<CompareWindow> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
-              FilledButton(onPressed: submit, child: const Text('Go')),
+              FilledButton(
+                onPressed: submit,
+                child: Text(AppLocalizations.of(context)!.go),
+              ),
             ],
           );
         },
@@ -523,6 +662,77 @@ class _CompareWindowState extends State<CompareWindow> {
       ? '${(size / 1024).toStringAsFixed(1)} KiB'
       : '${(size / 1024 / 1024).toStringAsFixed(1)} MiB';
 
+  String _statusText(AppLocalizations? l10n) {
+    if (l10n == null) return controller.status.name;
+    return switch (controller.status) {
+      CompareStatus.openTwoFiles => l10n.statusOpenTwoFiles,
+      CompareStatus.oneFilePreview => l10n.statusOneFilePreview,
+      CompareStatus.readError => l10n.statusReadError,
+      CompareStatus.editingEnabled => l10n.statusEditingEnabled(
+        controller.statusDetail == 'left' ? l10n.left : l10n.right,
+      ),
+      CompareStatus.editingDisabled => l10n.statusEditingDisabled(
+        controller.statusDetail == 'left' ? l10n.left : l10n.right,
+      ),
+      CompareStatus.enterSecondHexDigit => l10n.statusEnterSecondHexDigit(
+        controller.statusDetail ?? '',
+      ),
+      CompareStatus.edited => l10n.statusEdited(controller.statusDetail ?? ''),
+      CompareStatus.hexInputCanceled => l10n.statusHexInputCanceled,
+      CompareStatus.saved => l10n.statusSaved(controller.statusDetail ?? ''),
+      CompareStatus.offset => l10n.statusOffset(controller.statusDetail ?? ''),
+      CompareStatus.comparing => l10n.statusComparing,
+      CompareStatus.findingDifference => l10n.statusFindingDifference,
+      CompareStatus.comparisonComplete => l10n.statusComparisonComplete,
+      CompareStatus.filesIdentical => l10n.statusFilesIdentical,
+      CompareStatus.noLaterDifferences => l10n.statusNoLaterDifferences,
+      CompareStatus.noEarlierDifferences => l10n.statusNoEarlierDifferences,
+      CompareStatus.differenceAt => l10n.statusDifferenceAt(
+        controller.statusDetail ?? '',
+      ),
+      CompareStatus.comparisonError => l10n.statusComparisonError,
+      CompareStatus.comparisonStartFailed => l10n.statusComparisonStartFailed,
+      CompareStatus.canceled => l10n.statusCanceled,
+    };
+  }
+
+  String _saveErrorText(AppLocalizations l10n, SaveResult result) {
+    final message = switch (result.error) {
+      SaveError.noFileOpen => l10n.saveNoFileOpen,
+      SaveError.saveInProgress => l10n.saveInProgress,
+      SaveError.otherPaneHasDestination => l10n.saveOtherPaneHasDestination,
+      SaveError.couldNotStart => l10n.saveCouldNotStart,
+      SaveError.noBackend => l10n.saveNoBackend,
+      SaveError.destinationDirectoryMissing =>
+        l10n.saveDestinationDirectoryMissing,
+      SaveError.destinationChanged => l10n.destinationChangedSaveAs,
+      SaveError.installationAmbiguous => l10n.saveInstallationAmbiguous,
+      SaveError.installationFailed => l10n.saveInstallationFailed,
+      SaveError.saveFailed => l10n.saveFileFailed,
+      SaveError.savedButCouldNotReopen => l10n.saveSavedButCouldNotReopen,
+      null => l10n.saveFileFailed,
+    };
+    final detail = result.detail;
+    return detail == null || detail.isEmpty ? message : '$message\n$detail';
+  }
+
+  String _compareErrorText(AppLocalizations l10n) =>
+      switch (controller.errorCode) {
+        CompareError.openingBlockedBySave => l10n.openingBlockedBySave,
+        CompareError.alreadyOpenInOtherPane => l10n.alreadyOpenInOtherPane,
+        CompareError.openFileFailed => l10n.openFileFailed,
+        CompareError.readFileFailed => l10n.readFileFailed,
+        CompareError.comparisonFailed => l10n.comparisonFailed,
+        CompareError.desktopInitializationFailed =>
+          l10n.desktopInitializationFailed,
+        CompareError.dropOnPane => l10n.dropOnPane,
+        CompareError.dropTooManyFiles => l10n.dropTooManyFiles,
+        CompareError.dropNotFinderFile => l10n.dropNotFinderFile,
+        CompareError.dropNotReadableFile => l10n.dropNotReadableFile,
+        CompareError.dropCouldNotOpen => l10n.dropCouldNotOpen,
+        null => l10n.error,
+      };
+
   Widget pane(bool left) {
     final file = left ? controller.left : controller.right;
     final headerHeight = _paneHeaderHeight;
@@ -563,122 +773,130 @@ class _CompareWindowState extends State<CompareWindow> {
     );
   }
 
-  Widget _paneContents(
-    bool left,
-    dynamic file,
-    double headerHeight,
-  ) => Semantics(
-    container: true,
-    label:
-        '${left ? 'Left' : 'Right'} file drop target. Drop one binary file to open it on the ${left ? 'left' : 'right'}.',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          height: headerHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                left ? Icons.file_present_outlined : Icons.compare_outlined,
-                size: 21,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${left ? 'Left' : 'Right'} · ${file == null ? 'No file selected' : '${path.basename(file.path)}${controller.dirty(left) ? ' *' : ''}'}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    Tooltip(
-                      message: file?.path ?? '',
-                      child: Text(
-                        file == null
-                            ? 'Choose Open ${left ? 'Left' : 'Right'}'
-                            : '${fileSize(file.stamp.size)}  ·  ${file.stamp.size} bytes',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  ],
+  Widget _paneContents(bool left, dynamic file, double headerHeight) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
+    final side = left ? l10n.left : l10n.right;
+    return Semantics(
+      container: true,
+      label: l10n.fileDropTarget(side),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: headerHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
                 ),
               ),
-              Switch(
-                value: controller.editing(left),
-                onChanged: file == null
-                    ? null
-                    : (value) => controller.setEditing(left, value),
-              ),
-              Text(
-                controller.editing(left) ? 'Edit ON' : 'Edit OFF',
-                style: const TextStyle(fontSize: 11),
-              ),
-              IconButton(
-                tooltip: 'Save ${left ? 'Left' : 'Right'}',
-                onPressed: _desktopInitialized && controller.dirty(left)
-                    ? () => save(left, saveAs: false)
-                    : null,
-                icon: const Icon(Icons.save_outlined, size: 18),
-              ),
-              IconButton(
-                tooltip: 'Save ${left ? 'Left' : 'Right'} As',
-                onPressed: file == null || !_desktopInitialized
-                    ? null
-                    : () => save(left, saveAs: true),
-                icon: const Icon(Icons.save_as_outlined, size: 18),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: HexPane(
-            bytes: left ? controller.leftBytes : controller.rightBytes,
-            other: left ? controller.rightBytes : controller.leftBytes,
-            offset: controller.offset,
-            size: file?.stamp.size ?? 0,
-            totalSize: controller.length,
-            columns: controller.bytesPerRow,
-            isLeft: left,
-            hasFile: file != null,
-            hasOther: (left ? controller.right : controller.left) != null,
-            loading: controller.loading,
-            invalid: controller.invalid,
-            selected: controller.selectedLeft == left
-                ? controller.selected
-                : null,
-            edited: Set.unmodifiable(
-              left ? controller.leftEdits.keys : controller.rightEdits.keys,
             ),
-            editing: controller.editing(left),
-            onSelect: (at) => controller.select(at, left),
-            onVerticalPointerScroll: _pointerScroll,
-            focusNode: left ? leftFocus : rightFocus,
+            child: Row(
+              children: [
+                Icon(
+                  left ? Icons.file_present_outlined : Icons.compare_outlined,
+                  size: 21,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.paneFileLabel(
+                          side,
+                          file == null
+                              ? l10n.noFileSelected
+                              : '${path.basename(file.path)}${controller.dirty(left) ? ' *' : ''}',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Tooltip(
+                        message: file?.path ?? '',
+                        child: Text(
+                          file == null
+                              ? l10n.chooseOpen(side)
+                              : l10n.fileSizeDetails(
+                                  fileSize(file.stamp.size),
+                                  file.stamp.size,
+                                ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: controller.editing(left),
+                  onChanged: file == null
+                      ? null
+                      : (value) => controller.setEditing(left, value),
+                ),
+                Text(
+                  controller.editing(left) ? l10n.editingOn : l10n.editingOff,
+                  style: const TextStyle(fontSize: 11),
+                ),
+                IconButton(
+                  tooltip: l10n.savePane(side),
+                  onPressed: _desktopInitialized && controller.dirty(left)
+                      ? () => save(left, saveAs: false)
+                      : null,
+                  icon: const Icon(Icons.save_outlined, size: 18),
+                ),
+                IconButton(
+                  tooltip: l10n.savePaneAs(side),
+                  onPressed: file == null || !_desktopInitialized
+                      ? null
+                      : () => save(left, saveAs: true),
+                  icon: const Icon(Icons.save_as_outlined, size: 18),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+          Expanded(
+            child: HexPane(
+              bytes: left ? controller.leftBytes : controller.rightBytes,
+              other: left ? controller.rightBytes : controller.leftBytes,
+              offset: controller.offset,
+              size: file?.stamp.size ?? 0,
+              totalSize: controller.length,
+              columns: controller.bytesPerRow,
+              isLeft: left,
+              hasFile: file != null,
+              hasOther: (left ? controller.right : controller.left) != null,
+              loading: controller.loading,
+              invalid: controller.invalid,
+              selected: controller.selectedLeft == left
+                  ? controller.selected
+                  : null,
+              edited: Set.unmodifiable(
+                left ? controller.leftEdits.keys : controller.rightEdits.keys,
+              ),
+              editing: controller.editing(left),
+              onSelect: (at) => controller.select(at, left),
+              onVerticalPointerScroll: _pointerScroll,
+              focusNode: left ? leftFocus : rightFocus,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget hashValue(bool left) {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsEn();
     final file = left ? controller.left : controller.right;
     final value = controller.hash(left);
     final display = file == null
-        ? 'No file'
+        ? l10n.noFile
         : controller.hashing(left)
-        ? 'Calculating…'
-        : value ?? 'Unavailable';
+        ? l10n.calculating
+        : value ?? l10n.unavailable;
     final highlight = value != null && controller.hashesDiffer;
     return Expanded(
       child: Padding(
@@ -688,7 +906,7 @@ class _CompareWindowState extends State<CompareWindow> {
           child: Row(
             children: [
               Text(
-                '${left ? 'Left' : 'Right'}: ',
+                l10n.hashPaneLabel(left ? l10n.left : l10n.right),
                 style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
               ),
               Flexible(
@@ -760,42 +978,68 @@ class _CompareWindowState extends State<CompareWindow> {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
+                      const LanguageSelector(),
                       FilledButton.tonalIcon(
                         onPressed: picking || !_desktopInitialized
                             ? null
                             : () => open(true),
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('Open Left'),
+                        label: Text(
+                          AppLocalizations.of(context)?.openLeft ?? 'Open Left',
+                        ),
                       ),
                       FilledButton.tonalIcon(
                         onPressed: picking || !_desktopInitialized
                             ? null
                             : () => open(false),
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('Open Right'),
+                        label: Text(
+                          AppLocalizations.of(context)?.openRight ??
+                              'Open Right',
+                        ),
                       ),
                       OutlinedButton.icon(
                         onPressed: controller.canCompare && !controller.busy
                             ? () => controller.compare(forward: false)
                             : null,
                         icon: const Icon(Icons.arrow_upward, size: 16),
-                        label: const Text('Previous Diff'),
+                        label: Text(
+                          AppLocalizations.of(context)?.previousDiff ??
+                              'Previous Diff',
+                        ),
                       ),
                       OutlinedButton.icon(
                         onPressed: controller.canCompare && !controller.busy
                             ? () => controller.compare(forward: true)
                             : null,
                         icon: const Icon(Icons.arrow_downward, size: 16),
-                        label: const Text('Next Diff'),
+                        label: Text(
+                          AppLocalizations.of(context)?.nextDiff ?? 'Next Diff',
+                        ),
                       ),
                       TextButton(
                         onPressed: controller.length > 0 ? goTo : null,
-                        child: const Text('Go to Offset'),
+                        child: Text(
+                          AppLocalizations.of(context)?.goToOffset ??
+                              'Go to Offset',
+                        ),
                       ),
                       SegmentedButton<int>(
-                        segments: const [
-                          ButtonSegment(value: 8, label: Text('8 B/row')),
-                          ButtonSegment(value: 16, label: Text('16 B/row')),
+                        segments: [
+                          ButtonSegment(
+                            value: 8,
+                            label: Text(
+                              AppLocalizations.of(context)?.bytesPerRow(8) ??
+                                  '8 B/row',
+                            ),
+                          ),
+                          ButtonSegment(
+                            value: 16,
+                            label: Text(
+                              AppLocalizations.of(context)?.bytesPerRow(16) ??
+                                  '16 B/row',
+                            ),
+                          ),
                         ],
                         selected: {controller.bytesPerRow},
                         onSelectionChanged: (v) => controller.setWidth(v.first),
@@ -811,7 +1055,10 @@ class _CompareWindowState extends State<CompareWindow> {
                             ? controller.compare
                             : null,
                         child: Text(
-                          controller.busy ? 'Cancel' : 'Compare Again',
+                          controller.busy
+                              ? AppLocalizations.of(context)?.cancel ?? 'Cancel'
+                              : AppLocalizations.of(context)?.compareAgain ??
+                                    'Compare Again',
                         ),
                       ),
                     ],
@@ -826,13 +1073,19 @@ class _CompareWindowState extends State<CompareWindow> {
                   )
                 else
                   const SizedBox(height: 2),
-                if (controller.error != null)
+                if (controller.error != null || controller.errorCode != null)
                   Container(
                     width: double.infinity,
                     color: Theme.of(context).colorScheme.errorContainer,
                     padding: const EdgeInsets.all(10),
                     child: Text(
-                      controller.error!,
+                      _compareErrorText(
+                            AppLocalizations.of(context) ??
+                                AppLocalizationsEn(),
+                          ) +
+                          (controller.error == null || controller.error!.isEmpty
+                              ? ''
+                              : '\n${controller.error}'),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -905,7 +1158,10 @@ class _CompareWindowState extends State<CompareWindow> {
                   child: Row(
                     children: [
                       const SizedBox(width: 16),
-                      const Text('Hash', style: TextStyle(fontSize: 12)),
+                      Text(
+                        AppLocalizations.of(context)?.hash ?? 'Hash',
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       const SizedBox(width: 8),
                       DropdownButtonHideUnderline(
                         child: DropdownButton<FileHashAlgorithm>(
@@ -962,32 +1218,59 @@ class _CompareWindowState extends State<CompareWindow> {
                     spacing: 20,
                     runSpacing: 4,
                     children: [
-                      const Text(
-                        'Same-offset comparison',
+                      Text(
+                        AppLocalizations.of(context)?.sameOffsetComparison ??
+                            'Same-offset comparison',
                         style: TextStyle(fontSize: 12),
                       ),
                       Text(
-                        controller.status,
+                        _statusText(AppLocalizations.of(context)),
                         style: const TextStyle(fontSize: 12),
                       ),
                       if (_updateChecker?.offer case final offer?) ...[
                         Text(
-                          'Update ${offer.version} available',
+                          AppLocalizations.of(context)
+                                  ?.updateAvailable(offer.version) ??
+                              'Update ${offer.version} available',
                           style: const TextStyle(fontSize: 12),
                         ),
                         TextButton(
                           onPressed: _updateChecker!.openOffer,
-                          child: Text(offer.linkLabel),
+                          child: Text(
+                            offer.link == UpdateOfferLink.download
+                                ? AppLocalizations.of(context)
+                                          ?.updateDownload ??
+                                      'Download'
+                                : AppLocalizations.of(context)
+                                          ?.updateViewRelease ??
+                                      'View release',
+                          ),
                         ),
                       ],
                       if (controller.pair && !controller.invalid)
                         Text(
-                          '${controller.complete ? 'Differences' : 'Found so far'} ${controller.diffBytes} bytes / ${controller.diffRuns} ranges',
+                          (AppLocalizations.of(context)?.differenceSummary(
+                                controller.complete
+                                    ? AppLocalizations.of(context)!.differences
+                                    : AppLocalizations.of(context)!.foundSoFar,
+                                controller.diffBytes,
+                                controller.diffRuns,
+                              )) ??
+                              '${controller.complete ? 'Differences' : 'Found so far'} ${controller.diffBytes} bytes / ${controller.diffRuns} ranges',
                           style: const TextStyle(fontSize: 12),
                         ),
                       if (controller.selected != null)
                         Text(
-                          '${controller.selectedLeft ? 'Left' : 'Right'} 0x${controller.selected!.toRadixString(16).padLeft(8, '0').toUpperCase()}',
+                          (AppLocalizations.of(context)?.selectedOffset(
+                                controller.selectedLeft
+                                    ? AppLocalizations.of(context)!.left
+                                    : AppLocalizations.of(context)!.right,
+                                controller.selected!
+                                    .toRadixString(16)
+                                    .padLeft(8, '0')
+                                    .toUpperCase(),
+                              )) ??
+                              '${controller.selectedLeft ? 'Left' : 'Right'} 0x${controller.selected!.toRadixString(16).padLeft(8, '0').toUpperCase()}',
                           style: const TextStyle(fontSize: 12),
                         ),
                       if (controller.complete)
@@ -995,8 +1278,9 @@ class _CompareWindowState extends State<CompareWindow> {
                           '${controller.elapsedMs} ms',
                           style: const TextStyle(fontSize: 12),
                         ),
-                      const Text(
-                        'Red: different  ·  Orange: one side only',
+                      Text(
+                        AppLocalizations.of(context)?.differenceLegend ??
+                            'Red: different · Orange: one side only',
                         style: TextStyle(fontSize: 12),
                       ),
                     ],

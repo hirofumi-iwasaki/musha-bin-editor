@@ -36,8 +36,18 @@ class DesktopDropExited extends DesktopEvent {
 }
 
 class DesktopDropError extends DesktopEvent {
-  const DesktopDropError(this.message);
-  final String message;
+  const DesktopDropError(this.code, {this.detail});
+  final DesktopDropErrorCode code;
+
+  /// OS-provided diagnostic text. It is deliberately not translated or parsed.
+  final String? detail;
+}
+
+enum DesktopDropErrorCode {
+  tooManyFiles,
+  notFinderFile,
+  notReadableFile,
+  couldNotOpen,
 }
 
 class DesktopCloseRequested extends DesktopEvent {
@@ -51,7 +61,7 @@ abstract class DesktopPlatform {
   String? get stagingDirectory;
   Future<void> initialize();
   void setEventHandler(DesktopEventHandler? handler);
-  Future<String?> openFile(DesktopPane pane);
+  Future<String?> openFile(DesktopPane pane, String typeGroupLabel);
   Future<String?> saveFile(DesktopPane pane, String suggestedName);
   Future<SaveInstallResult> installSavedFile(
     String stagedPath,
@@ -93,12 +103,10 @@ class _DesktopPlatform extends DesktopPlatform with WindowListener {
   void setEventHandler(DesktopEventHandler? handler) => _handler = handler;
 
   @override
-  Future<String?> openFile(DesktopPane pane) async {
+  Future<String?> openFile(DesktopPane pane, String typeGroupLabel) async {
     if (_isMacOS) return _channel.invokeMethod<String>('openFile', _side(pane));
     final file = await file_selector.openFile(
-      acceptedTypeGroups: const [
-        file_selector.XTypeGroup(label: 'Binary files'),
-      ],
+      acceptedTypeGroups: [file_selector.XTypeGroup(label: typeGroupLabel)],
     );
     return file?.path;
   }
@@ -123,10 +131,10 @@ class _DesktopPlatform extends DesktopPlatform with WindowListener {
     String destinationPath,
   ) async {
     try {
-      final response = await _channel.invokeMethod<Object?>('installSavedFile', {
-        'stagedPath': stagedPath,
-        'destinationPath': destinationPath,
-      });
+      final response = await _channel.invokeMethod<Object?>(
+        'installSavedFile',
+        {'stagedPath': stagedPath, 'destinationPath': destinationPath},
+      );
       // The established macOS channel returns no value after a successful
       // replacement. Windows and Linux return a structured recovery result.
       if (response == null) return const SaveInstallResult.installed();
@@ -181,14 +189,12 @@ class _DesktopPlatform extends DesktopPlatform with WindowListener {
   @override
   Future<void> reportDropFiles(List<String> paths, DesktopPane pane) async {
     if (paths.length != 1) {
-      await _emit(const DesktopDropError('Drop exactly one file at a time.'));
+      await _emit(const DesktopDropError(DesktopDropErrorCode.tooManyFiles));
       return;
     }
     final type = await FileSystemEntity.type(paths.single, followLinks: true);
     if (type != FileSystemEntityType.file) {
-      await _emit(
-        const DesktopDropError('The dropped item is not a readable file.'),
-      );
+      await _emit(const DesktopDropError(DesktopDropErrorCode.notReadableFile));
       return;
     }
     await _emit(DesktopFileDropped(paths.single, pane: pane));
@@ -229,7 +235,7 @@ class _DesktopPlatform extends DesktopPlatform with WindowListener {
           );
         } else {
           await _emit(
-            const DesktopDropError('Unable to open the dropped file.'),
+            const DesktopDropError(DesktopDropErrorCode.couldNotOpen),
           );
         }
         return;
@@ -255,9 +261,15 @@ class _DesktopPlatform extends DesktopPlatform with WindowListener {
         final arguments = call.arguments;
         await _emit(
           DesktopDropError(
-            arguments is Map && arguments['message'] is String
-                ? arguments['message'] as String
-                : 'Unable to open the dropped file.',
+            switch (arguments is Map ? arguments['code'] : null) {
+              'tooManyFiles' => DesktopDropErrorCode.tooManyFiles,
+              'notFinderFile' => DesktopDropErrorCode.notFinderFile,
+              'notReadableFile' => DesktopDropErrorCode.notReadableFile,
+              _ => DesktopDropErrorCode.couldNotOpen,
+            },
+            detail: arguments is Map && arguments['detail'] is String
+                ? arguments['detail'] as String
+                : null,
           ),
         );
         return;

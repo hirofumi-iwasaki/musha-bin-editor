@@ -185,17 +185,19 @@ class StableVersion implements Comparable<StableVersion> {
   String toString() => '$major.$minor.$patch';
 }
 
+enum UpdateOfferLink { download, viewRelease }
+
 class UpdateOffer {
   const UpdateOffer({
     required this.version,
     required this.tag,
     required this.url,
-    required this.linkLabel,
+    required this.link,
   });
   final StableVersion version;
   final String tag;
   final Uri url;
-  final String linkLabel;
+  final UpdateOfferLink link;
 }
 
 class UpdateCheckController extends ChangeNotifier {
@@ -363,7 +365,7 @@ class UpdateCheckController extends ChangeNotifier {
               version: version,
               tag: tag,
               url: url,
-              linkLabel: 'Download',
+              link: UpdateOfferLink.download,
             );
           }
         }
@@ -372,7 +374,7 @@ class UpdateCheckController extends ChangeNotifier {
         version: version,
         tag: tag,
         url: pageUrl,
-        linkLabel: 'View release',
+        link: UpdateOfferLink.viewRelease,
       );
     } catch (_) {
       return null;
@@ -403,7 +405,7 @@ class UpdateCheckController extends ChangeNotifier {
       jsonEncode({
         'tag': offer.tag,
         'url': offer.url.toString(),
-        'label': offer.linkLabel,
+        'link': offer.link.name,
       }),
     );
     await _preferences.setString(
@@ -425,8 +427,15 @@ class UpdateCheckController extends ChangeNotifier {
       if (json is! Map) return null;
       final tag = json['tag'];
       final rawUrl = json['url'];
-      final label = json['label'];
-      if (tag is! String || rawUrl is! String || label is! String) return null;
+      final storedLink = json['link'] ?? json['label'];
+      if (tag is! String || rawUrl is! String || storedLink is! String) {
+        return null;
+      }
+      final link = switch (storedLink) {
+        'download' || 'Download' => UpdateOfferLink.download,
+        'viewRelease' || 'View release' => UpdateOfferLink.viewRelease,
+        _ => null,
+      };
       final version = StableVersion.parseReleaseTag(tag);
       final url = Uri.tryParse(rawUrl);
       final installed = StableVersion.parse(installedVersion);
@@ -434,20 +443,15 @@ class UpdateCheckController extends ChangeNotifier {
           installed == null ||
           version.compareTo(installed) <= 0 ||
           url == null ||
-          (label != 'Download' && label != 'View release')) {
+          link == null) {
         return null;
       }
-      final valid = label == 'Download'
+      final valid = link == UpdateOfferLink.download
           ? _validAsset(url, tag, _assetName(_runtimeTarget) ?? '')
           : _validReleasePage(url, tag);
       return valid == null
           ? null
-          : UpdateOffer(
-              version: version,
-              tag: tag,
-              url: valid,
-              linkLabel: label,
-            );
+          : UpdateOffer(version: version, tag: tag, url: valid, link: link);
     } catch (_) {
       return null;
     }
