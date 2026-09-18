@@ -1,14 +1,13 @@
 # 作業計画と進捗
 
-## Current milestone: v0.4.0 (2026-09-15)
+## Current milestone: v0.6.0 (2026-09-15)
 
-- Working branch: `release/0.4.0`, created from merged main `0bd7646`.
-- Goal: Windows x64/Arm64 and Ubuntu-only x64/Arm64, preserving macOS.
-- Read [the continuation plan](RELEASE_0.4.0_PLAN.md) and [cross-platform design](CROSS_PLATFORM_DESIGN.md) before resuming.
-- Completed: design review, scope record, branch creation.
-- Validation: documentation consistency only; no platform implementation/build tests performed.
-- Next action: prove native toolchain/plugin feasibility and identify target test environments.
-- Earlier sections below are historical; the v0.4.0 plan defines current work.
+- Working branch: `release/0.6.0`, created from merged main `b5d6d7a`.
+- Goal: apply the approved Mushagaeshi icon across macOS, Windows and Linux packages.
+- Completed: source artwork retained, macOS AppIcon PNGs, Windows multi-resolution `.ico`, and Linux GTK/desktop-entry/hicolor assets wired into the build bundle.
+- Validation: source/derived dimensions and alpha checked; the local macOS build was attempted but Xcode stopped before compilation because its license has not been accepted. The native CI matrix remains release verification.
+- Next action: run the native package matrix and perform platform launcher/icon acceptance before publication.
+- Earlier sections below are historical.
 
 ## 0.3.0 hash display
 

@@ -20,6 +20,8 @@ Windows/Linux use Ctrl instead of Command for the shortcuts listed below. Their 
 
 Native CI and packaging scripts are included. Run `tool/build_windows.ps1 -Architecture x64` (or `arm64`) on the corresponding Windows host, and `bash tool/build_linux.sh x64` (or `arm64`) on the corresponding Ubuntu host. Each archive includes the full runtime bundle, third-party notices and corresponding-source/build references. Arm64 CI bootstraps the pinned official Flutter source checkout to obtain native Dart/engine artifacts. CI compilation is not a substitute for GUI acceptance.
 
+The Linux archive includes a GTK window icon and a freedesktop desktop entry with hicolor icon-theme files under `share/`. A package installer can place those files in the corresponding XDG data directories and make `mushagaeshi_binary_editor` available on `PATH`; merely unpacking the archive does not register a launcher. Before installation, start the bundled executable directly.
+
 Ubuntu existing-file replacement currently rejects special permission bits, owner/group changes, ACLs or other extended attributes (including cases where inspection fails), rather than discard metadata. Ordinary rwx permissions are preserved. Detailed native failure/recovery behavior still requires targeted Ubuntu and Windows execution tests. File change detection uses size and modification time and cannot detect every possible external rewrite.
 
 See the [update-check design](.chatgpt/UPDATE_CHECK_DESIGN.md) for network, cache and link-validation behavior.

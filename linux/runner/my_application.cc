@@ -43,6 +43,18 @@ FlValue* save_result(const gchar* status, const gchar* message = nullptr,
   return result;
 }
 
+void set_window_icon_from_bundle(GtkWindow* window) {
+  g_autoptr(GError) error = nullptr;
+  g_autofree gchar* executable_path = g_file_read_link("/proc/self/exe", &error);
+  if (executable_path == nullptr) return;
+  g_autofree gchar* bundle_dir = g_path_get_dirname(executable_path);
+  g_autofree gchar* icon_path =
+      g_build_filename(bundle_dir, "data", "app_icon.png", nullptr);
+  if (g_file_test(icon_path, G_FILE_TEST_IS_REGULAR)) {
+    gtk_window_set_icon_from_file(window, icon_path, nullptr);
+  }
+}
+
 bool regular_file(const gchar* path) {
   struct stat info;
   return lstat(path, &info) == 0 && S_ISREG(info.st_mode);
@@ -258,6 +270,7 @@ static void my_application_activate(GApplication* application) {
   }
 
   gtk_window_set_default_size(window, 1280, 720);
+  set_window_icon_from_bundle(window);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
