@@ -109,6 +109,30 @@ void main() {
     expect(controller.openedPath, '/tmp/right.bin');
     expect(controller.openedLeft, isFalse);
 
+    // The native host intentionally checks filesystem object type rather than
+    // a filename extension. Keep the Dart channel contract equally permissive.
+    await sendNativeMethod(
+      MethodCall('fileDropped', {
+        'path': '/tmp/firmware',
+        'x': leftPoint.dx,
+        'y': leftPoint.dy,
+      }),
+    );
+    await tester.pump();
+    expect(controller.openedPath, '/tmp/firmware');
+    expect(controller.openedLeft, isTrue);
+
+    await sendNativeMethod(
+      MethodCall('fileDropped', {
+        'path': '/tmp/capture.custom-image',
+        'x': rightPoint.dx,
+        'y': rightPoint.dy,
+      }),
+    );
+    await tester.pump();
+    expect(controller.openedPath, '/tmp/capture.custom-image');
+    expect(controller.openedLeft, isFalse);
+
     await sendNativeMethod(
       const MethodCall('fileDropError', {'code': 'tooManyFiles'}),
     );
