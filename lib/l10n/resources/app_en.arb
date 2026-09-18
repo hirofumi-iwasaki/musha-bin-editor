@@ -1,0 +1,120 @@
+{
+  "@@locale": "en",
+  "languageLoadFailed": "The saved language preference could not be read. System language is in use.",
+  "languageSaveFailed": "The language preference could not be saved.",
+  "openLeft": "Open Left",
+  "openRight": "Open Right",
+  "previousDiff": "Previous Diff",
+  "nextDiff": "Next Diff",
+  "goToOffset": "Go to Offset",
+  "bytesPerRow": "{count} B/row",
+  "@bytesPerRow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "compareAgain": "Compare Again",
+  "save": "Save",
+  "cancel": "Cancel",
+  "discard": "Discard",
+  "overwrite": "Overwrite",
+  "go": "Go",
+  "retry": "Retry",
+  "left": "Left",
+  "right": "Right",
+  "noFile": "No file",
+  "noFileSelected": "No file selected",
+  "calculating": "Calculating…",
+  "unavailable": "Unavailable",
+  "desktopUnavailable": "Desktop integration is not available.",
+  "dropTooManyFiles": "Drop exactly one file at a time.",
+  "dropNotFinderFile": "Only files from Finder can be dropped here.",
+  "dropNotReadableFile": "The dropped item is not a readable file.",
+  "dropCouldNotOpen": "Unable to open the dropped file.",
+  "dropOnPane": "Drop the file on the left or right binary pane.",
+  "@dropOnPane": {
+    "description": "Instruction for a file that missed both panes."
+  },
+  "statusOpenTwoFiles": "Open two files to compare",
+  "statusOneFilePreview": "One file open · Read-only preview",
+  "statusReadError": "Read error · Reopen the file",
+  "statusComparisonError": "Comparison error · Reopen the files",
+  "statusComparing": "Comparing files…",
+  "statusFindingDifference": "Finding difference…",
+  "statusComparisonComplete": "Comparison complete",
+  "statusFilesIdentical": "Comparison complete · Files are identical",
+  "statusNoLaterDifferences": "No later differences",
+  "statusNoEarlierDifferences": "No earlier differences",
+  "statusCanceled": "Canceled · Visible differences remain available",
+  "statusEditingEnabled": "{side} editing enabled",
+  "@statusEditingEnabled": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "statusEditingDisabled": "{side} editing disabled",
+  "@statusEditingDisabled": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "statusEnterSecondHexDigit": "Enter second hex digit: {digit}_",
+  "@statusEnterSecondHexDigit": {
+    "placeholders": {
+      "digit": {}
+    }
+  },
+  "statusEdited": "Edited 0x{offset}",
+  "@statusEdited": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusHexInputCanceled": "Hex input canceled",
+  "statusSaved": "Saved {name}",
+  "@statusSaved": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusOffset": "Offset 0x{offset}",
+  "@statusOffset": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusDifferenceAt": "Difference at 0x{offset}",
+  "@statusDifferenceAt": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusComparisonStartFailed": "Unable to start comparison",
+  "hexPaneNotCompared": "not compared",
+  "hexPaneEqual": "equal",
+  "hexPaneDifferent": "different",
+  "hexPaneSelectedByte": "Offset {offset}, value {value}, {comparison}",
+  "@hexPaneSelectedByte": {
+    "placeholders": {
+      "offset": {},
+      "value": {},
+      "comparison": {}
+    }
+  },
+  "hexPaneEditingEnabled": "editing enabled",
+  "hexPaneEditingDisabled": "editing disabled",
+  "hexPaneSemantics": "{side} binary pane, {editing}. {selected}",
+  "@hexPaneSemantics": {
+    "placeholders": {
+      "side": {},
+      "editing": {},
+      "selected": {}
+    }
+  },
+  "hexPaneOffsetHeader": "OFFSET",
+  "hexPaneAsciiHeader": "ASCII",
+  "hexPaneDragFileHereToOpen": "Drag file here to open",
+  "hexPaneFileEmpty": "This file is empty"
+}

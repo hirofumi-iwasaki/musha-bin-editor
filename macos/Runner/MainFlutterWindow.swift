@@ -53,17 +53,17 @@ private final class FileDropHostView: NSView {
     defer { channel?.invokeMethod("fileDragExited", arguments: nil) }
     let urls = URLs(sender)
     guard urls.count == 1 else {
-      channel?.invokeMethod("fileDropError", arguments: ["message": "Drop exactly one file at a time."])
+      channel?.invokeMethod("fileDropError", arguments: ["code": "tooManyFiles"])
       return false
     }
     let url = urls[0]
     guard url.isFileURL else {
-      channel?.invokeMethod("fileDropError", arguments: ["message": "Only files from Finder can be dropped here."])
+      channel?.invokeMethod("fileDropError", arguments: ["code": "notFinderFile"])
       return false
     }
     var isDirectory: ObjCBool = false
     guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
-      channel?.invokeMethod("fileDropError", arguments: ["message": "The dropped item is not a readable file."])
+      channel?.invokeMethod("fileDropError", arguments: ["code": "notReadableFile"])
       return false
     }
     let location = point(sender)
@@ -77,6 +77,7 @@ private final class FileDropHostView: NSView {
 
 class MainFlutterWindow: NSWindow, NSWindowDelegate {
   private var channel: FlutterMethodChannel?
+  private var languageChannel: FlutterMethodChannel?
   private var accessURLs: [String: URL] = [:]
   private var allowClose = false
 
@@ -98,6 +99,19 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     RegisterGeneratedPlugins(registry: controller)
     channel = FlutterMethodChannel(name: "mushagaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
     host.channel = channel
+    languageChannel = FlutterMethodChannel(
+      name: "mushagaeshi/language",
+      binaryMessenger: controller.engine.binaryMessenger
+    )
+    languageChannel?.setMethodCallHandler { call, result in
+      guard call.method == "setLanguage", let language = call.arguments as? String,
+            language == "en" || language == "ja" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      (NSApp.delegate as? AppDelegate)?.setMenuLanguage(language)
+      result(nil)
+    }
     channel?.setMethodCallHandler { [weak self] call, result in
       guard let self = self else {
         result(FlutterMethodNotImplemented)

@@ -1,0 +1,205 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for Japanese (`ja`).
+class AppLocalizationsJa extends AppLocalizations {
+  AppLocalizationsJa([String locale = 'ja']) : super(locale);
+
+  @override
+  String get languageLoadFailed => '保存済みの言語設定を読み込めませんでした。システム言語を使用しています。';
+
+  @override
+  String get languageSaveFailed => '言語設定を保存できませんでした。';
+
+  @override
+  String get openLeft => '左を開く';
+
+  @override
+  String get openRight => '右を開く';
+
+  @override
+  String get previousDiff => '前の差分';
+
+  @override
+  String get nextDiff => '次の差分';
+
+  @override
+  String get goToOffset => 'オフセットへ移動';
+
+  @override
+  String bytesPerRow(int count) {
+    return '$count バイト/行';
+  }
+
+  @override
+  String get compareAgain => '再比較';
+
+  @override
+  String get save => '保存';
+
+  @override
+  String get cancel => 'キャンセル';
+
+  @override
+  String get discard => '破棄';
+
+  @override
+  String get overwrite => '上書き';
+
+  @override
+  String get go => '移動';
+
+  @override
+  String get retry => '再試行';
+
+  @override
+  String get left => '左';
+
+  @override
+  String get right => '右';
+
+  @override
+  String get noFile => 'ファイルなし';
+
+  @override
+  String get noFileSelected => 'ファイルが選択されていません';
+
+  @override
+  String get calculating => '計算中…';
+
+  @override
+  String get unavailable => '利用できません';
+
+  @override
+  String get desktopUnavailable => 'デスクトップ連携を利用できません。';
+
+  @override
+  String get dropTooManyFiles => '一度にドロップできるファイルは 1 つです。';
+
+  @override
+  String get dropNotFinderFile => 'Finder のファイルだけをここにドロップできます。';
+
+  @override
+  String get dropNotReadableFile => 'ドロップされた項目は読み取り可能なファイルではありません。';
+
+  @override
+  String get dropCouldNotOpen => 'ドロップされたファイルを開けません。';
+
+  @override
+  String get dropOnPane => '左または右のバイナリペインにファイルをドロップしてください。';
+
+  @override
+  String get statusOpenTwoFiles => '比較する 2 つのファイルを開いてください';
+
+  @override
+  String get statusOneFilePreview => '1 つのファイルを開いています · 読み取り専用プレビュー';
+
+  @override
+  String get statusReadError => '読み取りエラー · ファイルを開き直してください';
+
+  @override
+  String get statusComparisonError => '比較エラー · ファイルを開き直してください';
+
+  @override
+  String get statusComparing => 'ファイルを比較中…';
+
+  @override
+  String get statusFindingDifference => '差分を検索中…';
+
+  @override
+  String get statusComparisonComplete => '比較が完了しました';
+
+  @override
+  String get statusFilesIdentical => '比較が完了しました · ファイルは同一です';
+
+  @override
+  String get statusNoLaterDifferences => 'これより後の差分はありません';
+
+  @override
+  String get statusNoEarlierDifferences => 'これより前の差分はありません';
+
+  @override
+  String get statusCanceled => 'キャンセルしました · 表示中の差分は引き続き利用できます';
+
+  @override
+  String statusEditingEnabled(Object side) {
+    return '$sideの編集を有効にしました';
+  }
+
+  @override
+  String statusEditingDisabled(Object side) {
+    return '$sideの編集を無効にしました';
+  }
+
+  @override
+  String statusEnterSecondHexDigit(Object digit) {
+    return '2 桁目の 16 進数を入力: ${digit}_';
+  }
+
+  @override
+  String statusEdited(Object offset) {
+    return '0x$offset を編集しました';
+  }
+
+  @override
+  String get statusHexInputCanceled => '16 進入力をキャンセルしました';
+
+  @override
+  String statusSaved(Object name) {
+    return '$name を保存しました';
+  }
+
+  @override
+  String statusOffset(Object offset) {
+    return 'オフセット 0x$offset';
+  }
+
+  @override
+  String statusDifferenceAt(Object offset) {
+    return '差分 0x$offset';
+  }
+
+  @override
+  String get statusComparisonStartFailed => '比較を開始できません';
+
+  @override
+  String get hexPaneNotCompared => '未比較';
+
+  @override
+  String get hexPaneEqual => '一致';
+
+  @override
+  String get hexPaneDifferent => '異なる';
+
+  @override
+  String hexPaneSelectedByte(Object offset, Object value, Object comparison) {
+    return 'オフセット $offset、値 $value、$comparison';
+  }
+
+  @override
+  String get hexPaneEditingEnabled => '編集有効';
+
+  @override
+  String get hexPaneEditingDisabled => '編集無効';
+
+  @override
+  String hexPaneSemantics(Object side, Object editing, Object selected) {
+    return '$sideのバイナリペイン、$editing。$selected';
+  }
+
+  @override
+  String get hexPaneOffsetHeader => 'オフセット';
+
+  @override
+  String get hexPaneAsciiHeader => 'ASCII';
+
+  @override
+  String get hexPaneDragFileHereToOpen => 'ファイルをここへドラッグして開く';
+
+  @override
+  String get hexPaneFileEmpty => 'このファイルは空です';
+}

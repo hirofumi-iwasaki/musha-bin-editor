@@ -4,7 +4,13 @@ A side-by-side hexadecimal binary viewer and comparison app for macOS, Windows a
 
 Repository: [hirofumi-iwasaki/musha-bin-editor](https://github.com/hirofumi-iwasaki/musha-bin-editor)
 
-Version 0.5.0 adds a non-blocking GitHub update notification after the first visible frame. It checks only the latest published stable release on a 24-hour cadence, offers the matching uploaded desktop package when available, and otherwise offers the validated release page. It never downloads, installs, or opens a browser automatically. The persisted automatic-check preference is enabled by default; a settings control is planned separately.
+Version 0.7.0 adds a Japanese interface, automatic Japanese/English selection, and a persistent language selector. It does not change binary data, comparison, editing, or save behavior.
+
+## UI language support
+
+**Language / 言語** at the top left offers **System / システム**, **English**, and **日本語**. A manual selection updates the interface immediately and is restored at the next launch. System mode uses only the first operating-system preferred language: `ja` (including a regional Japanese locale) uses Japanese and every other primary language uses English. A Japanese fallback later in the OS list does not switch the app to Japanese.
+
+Changing a manual selection does not replace open files, unsaved edits, the current offset, or an active comparison. macOS application-menu titles follow the selected app language. Native file-picker and Services chrome remain controlled by macOS and can stay in the OS language.
 
 ## v0.5.0 release status
 

@@ -1,0 +1,117 @@
+{
+  "@@locale": "ja",
+  "languageLoadFailed": "保存済みの言語設定を読み込めませんでした。システム言語を使用しています。",
+  "languageSaveFailed": "言語設定を保存できませんでした。",
+  "openLeft": "左を開く",
+  "openRight": "右を開く",
+  "previousDiff": "前の差分",
+  "nextDiff": "次の差分",
+  "goToOffset": "オフセットへ移動",
+  "bytesPerRow": "{count} バイト/行",
+  "@bytesPerRow": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "compareAgain": "再比較",
+  "save": "保存",
+  "cancel": "キャンセル",
+  "discard": "破棄",
+  "overwrite": "上書き",
+  "go": "移動",
+  "retry": "再試行",
+  "left": "左",
+  "right": "右",
+  "noFile": "ファイルなし",
+  "noFileSelected": "ファイルが選択されていません",
+  "calculating": "計算中…",
+  "unavailable": "利用できません",
+  "desktopUnavailable": "デスクトップ連携を利用できません。",
+  "dropTooManyFiles": "一度にドロップできるファイルは 1 つです。",
+  "dropNotFinderFile": "Finder のファイルだけをここにドロップできます。",
+  "dropNotReadableFile": "ドロップされた項目は読み取り可能なファイルではありません。",
+  "dropCouldNotOpen": "ドロップされたファイルを開けません。",
+  "dropOnPane": "左または右のバイナリペインにファイルをドロップしてください。",
+  "statusOpenTwoFiles": "比較する 2 つのファイルを開いてください",
+  "statusOneFilePreview": "1 つのファイルを開いています · 読み取り専用プレビュー",
+  "statusReadError": "読み取りエラー · ファイルを開き直してください",
+  "statusComparisonError": "比較エラー · ファイルを開き直してください",
+  "statusComparing": "ファイルを比較中…",
+  "statusFindingDifference": "差分を検索中…",
+  "statusComparisonComplete": "比較が完了しました",
+  "statusFilesIdentical": "比較が完了しました · ファイルは同一です",
+  "statusNoLaterDifferences": "これより後の差分はありません",
+  "statusNoEarlierDifferences": "これより前の差分はありません",
+  "statusCanceled": "キャンセルしました · 表示中の差分は引き続き利用できます",
+  "statusEditingEnabled": "{side}の編集を有効にしました",
+  "@statusEditingEnabled": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "statusEditingDisabled": "{side}の編集を無効にしました",
+  "@statusEditingDisabled": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "statusEnterSecondHexDigit": "2 桁目の 16 進数を入力: {digit}_",
+  "@statusEnterSecondHexDigit": {
+    "placeholders": {
+      "digit": {}
+    }
+  },
+  "statusEdited": "0x{offset} を編集しました",
+  "@statusEdited": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusHexInputCanceled": "16 進入力をキャンセルしました",
+  "statusSaved": "{name} を保存しました",
+  "@statusSaved": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "statusOffset": "オフセット 0x{offset}",
+  "@statusOffset": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusDifferenceAt": "差分 0x{offset}",
+  "@statusDifferenceAt": {
+    "placeholders": {
+      "offset": {}
+    }
+  },
+  "statusComparisonStartFailed": "比較を開始できません",
+  "hexPaneNotCompared": "未比較",
+  "hexPaneEqual": "一致",
+  "hexPaneDifferent": "異なる",
+  "hexPaneSelectedByte": "オフセット {offset}、値 {value}、{comparison}",
+  "@hexPaneSelectedByte": {
+    "placeholders": {
+      "offset": {},
+      "value": {},
+      "comparison": {}
+    }
+  },
+  "hexPaneEditingEnabled": "編集有効",
+  "hexPaneEditingDisabled": "編集無効",
+  "hexPaneSemantics": "{side}のバイナリペイン、{editing}。{selected}",
+  "@hexPaneSemantics": {
+    "placeholders": {
+      "side": {},
+      "editing": {},
+      "selected": {}
+    }
+  },
+  "hexPaneOffsetHeader": "オフセット",
+  "hexPaneAsciiHeader": "ASCII",
+  "hexPaneDragFileHereToOpen": "ファイルをここへドラッグして開く",
+  "hexPaneFileEmpty": "このファイルは空です"
+}

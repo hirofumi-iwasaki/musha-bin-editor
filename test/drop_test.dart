@@ -111,7 +111,7 @@ void main() {
 
     await sendNativeMethod(
       const MethodCall('fileDropError', {
-        'message': 'Drop exactly one file at a time.',
+        'code': 'tooManyFiles',
       }),
     );
     expect(controller.error, 'Drop exactly one file at a time.');
