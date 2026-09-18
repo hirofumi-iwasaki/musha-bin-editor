@@ -237,3 +237,12 @@
 - Added update-specific unit and widget tests. Local `flutter analyze` reported no issues and `flutter test` passed all 40 tests.
 - The controller caches only a validated offered update and its ETag. A valid 200 response with no newer stable offer or an invalid response clears that cache and records a successful validation, so it waits the normal 24-hour interval. Transient retries use deterministic bounded jitter of 2, 4, or 6 minutes rather than randomized jitter.
 - macOS Release build was attempted with `.tooling/flutter/bin/flutter build macos --release` but stopped before compilation because Xcode reported that its license agreements were not accepted and requested `sudo xcodebuild -license`. No entitlement inspection or native package verification was performed. No push or release publication occurred.
+
+### 2026-09-18 v0.7.0 Japanese and English localization
+
+- Created `release/0.7.0` from main at `b5d6d7a` and set package metadata to `0.7.0+7`. The desktop CI push trigger now targets this branch. No earlier release branch or icon work was merged.
+- Added ARB-backed English and Japanese text for application controls, dialogs, tooltips, status, accessibility labels, file-picker filter labels, update links, and error headings. The fixed bilingual selector persists System, English, or Japanese and updates the Flutter tree and macOS menu/panel text immediately.
+- Converted controller and save failures from English application sentences to stable semantic codes with optional unmodified OS diagnostic detail. An active error therefore changes language without changing its state; diagnostics remain after the localized heading.
+- Native macOS open/save panel titles and prompts use the active language. Platform-owned file-picker and Services chrome remain macOS-owned.
+- Validation: `flutter analyze` completed with no issues and `flutter test` passed all 45 tests, including Japanese runtime switching for a visible diagnostic and update-offer link. A stale 0.6.0 package was removed with the generated macOS build output. After enabling Flutter's local arm64-only macOS build setting required by Xcode 27, `tool/build_macos.sh` produced a fresh 0.7.0 build 7 arm64 package; strict deep code-signature verification passed. The only build output was a dependency deprecation warning from `file_selector_macos`.
+- Native Windows/Linux builds and GUI acceptance remain release validation work. No push or GitHub Release publication was performed.

@@ -80,6 +80,29 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
   private var languageChannel: FlutterMethodChannel?
   private var accessURLs: [String: URL] = [:]
   private var allowClose = false
+  private var language = "en"
+
+  private var usesJapanese: Bool { language == "ja" }
+
+  private func paneName(_ side: String) -> String {
+    if usesJapanese {
+      return side == "right" ? "右" : "左"
+    }
+    return side == "right" ? "Right" : "Left"
+  }
+
+  private func openPanelTitle(for side: String) -> String {
+    let pane = paneName(side)
+    return usesJapanese ? "\(pane)のバイナリファイルを開く" : "Open \(pane) Binary File"
+  }
+
+  private func savePanelTitle(for side: String) -> String {
+    let pane = paneName(side)
+    return usesJapanese ? "\(pane)のバイナリファイルに名前を付けて保存" : "Save \(pane) Binary File As"
+  }
+
+  private var openPanelPrompt: String { usesJapanese ? "開く" : "Open" }
+  private var savePanelPrompt: String { usesJapanese ? "保存" : "Save" }
 
   override func awakeFromNib() {
     let controller = FlutterViewController()
@@ -103,12 +126,13 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
       name: "mushagaeshi/language",
       binaryMessenger: controller.engine.binaryMessenger
     )
-    languageChannel?.setMethodCallHandler { call, result in
+    languageChannel?.setMethodCallHandler { [weak self] call, result in
       guard call.method == "setLanguage", let language = call.arguments as? String,
             language == "en" || language == "ja" else {
         result(FlutterMethodNotImplemented)
         return
       }
+      self?.language = language
       (NSApp.delegate as? AppDelegate)?.setMenuLanguage(language)
       result(nil)
     }
@@ -125,10 +149,10 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
       }
       if call.method == "saveFile" {
         let arguments = call.arguments as? [String: String]
-        let side = arguments?["side"] ?? "File"
+        let side = arguments?["side"] ?? "left"
         let panel = NSSavePanel()
-        panel.title = "Save \(side) Binary File As"
-        panel.prompt = "Save"
+        panel.title = self.savePanelTitle(for: side)
+        panel.prompt = self.savePanelPrompt
         panel.nameFieldStringValue = arguments?["name"] ?? "binary.bin"
         panel.beginSheetModal(for: self) { response in
           guard response == .OK, let url = panel.url else { result(nil); return }
@@ -169,10 +193,10 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
         result(FlutterMethodNotImplemented)
         return
       }
-      let side = (call.arguments as? [String: String])?["side"] ?? "Left"
+      let side = (call.arguments as? [String: String])?["side"] ?? "left"
       let panel = NSOpenPanel()
-      panel.title = "Open \(side) Binary File"
-      panel.prompt = "Open"
+      panel.title = self.openPanelTitle(for: side)
+      panel.prompt = self.openPanelPrompt
       panel.canChooseDirectories = false
       panel.canChooseFiles = true
       panel.allowsMultipleSelection = false

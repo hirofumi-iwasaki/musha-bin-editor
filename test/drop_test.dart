@@ -60,12 +60,12 @@ void main() {
     );
     final leftPoint = tester.getCenter(
       dropTarget(
-        'Left file drop target. Drop one binary file to open it on the left.',
+        'Left file drop target. Drop one binary file to open it on the Left.',
       ),
     );
     final rightPoint = tester.getCenter(
       dropTarget(
-        'Right file drop target. Drop one binary file to open it on the right.',
+        'Right file drop target. Drop one binary file to open it on the Right.',
       ),
     );
 
@@ -110,20 +110,19 @@ void main() {
     expect(controller.openedLeft, isFalse);
 
     await sendNativeMethod(
-      const MethodCall('fileDropError', {
-        'code': 'tooManyFiles',
-      }),
+      const MethodCall('fileDropError', {'code': 'tooManyFiles'}),
     );
-    expect(controller.error, 'Drop exactly one file at a time.');
+    expect(controller.errorCode, CompareError.dropTooManyFiles);
+    expect(controller.error, isNull);
     expect(
       dropTarget(
-        'Left file drop target. Drop one binary file to open it on the left.',
+        'Left file drop target. Drop one binary file to open it on the Left.',
       ),
       findsOneWidget,
     );
     expect(
       dropTarget(
-        'Right file drop target. Drop one binary file to open it on the right.',
+        'Right file drop target. Drop one binary file to open it on the Right.',
       ),
       findsOneWidget,
     );

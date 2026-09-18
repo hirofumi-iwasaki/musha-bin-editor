@@ -206,4 +206,169 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hexPaneFileEmpty => 'This file is empty';
+
+  @override
+  String get desktopInitializationFailed =>
+      'Desktop integration could not be initialized.';
+
+  @override
+  String saveChangesToFile(Object side) {
+    return 'Save changes to the $side file?';
+  }
+
+  @override
+  String get discardEditsWarning =>
+      'Unsaved edits will be lost if you discard them.';
+
+  @override
+  String get openFileFailed => 'Unable to open file.';
+
+  @override
+  String get readFileFailed => 'Unable to read file.';
+
+  @override
+  String get comparisonFailed => 'Comparison failed.';
+
+  @override
+  String get fileChangedOutsideApp => 'File changed outside the app';
+
+  @override
+  String get overwriteChangedFilePrompt =>
+      'Overwrite the externally changed file with the current edited content?';
+
+  @override
+  String get destinationChangedSaveAs =>
+      'The destination changed outside the app. Choose Save As again.';
+
+  @override
+  String get saveFileFailed => 'Unable to save file.';
+
+  @override
+  String get saveNoFileOpen => 'No file is open.';
+
+  @override
+  String get saveInProgress => 'A save is already in progress.';
+
+  @override
+  String get saveOtherPaneHasDestination =>
+      'The other pane already has this file open. Choose another destination.';
+
+  @override
+  String get saveCouldNotStart => 'Unable to start save.';
+
+  @override
+  String get saveNoBackend =>
+      'No safe save backend is available for this platform.';
+
+  @override
+  String get saveDestinationDirectoryMissing =>
+      'The destination directory does not exist.';
+
+  @override
+  String get saveInstallationAmbiguous =>
+      'The save result is ambiguous. A recovery copy was retained.';
+
+  @override
+  String get saveInstallationFailed => 'Unable to install the saved file.';
+
+  @override
+  String get saveSavedButCouldNotReopen =>
+      'The file was saved, but could not be reopened.';
+
+  @override
+  String get invalidHexOffset => 'Enter a hexadecimal offset within the file';
+
+  @override
+  String get hexOffsetHint => 'Hex offset (e.g. 400 or 0x400)';
+
+  @override
+  String fileDropTarget(Object side) {
+    return '$side file drop target. Drop one binary file to open it on the $side.';
+  }
+
+  @override
+  String paneFileLabel(Object side, Object name) {
+    return '$side · $name';
+  }
+
+  @override
+  String chooseOpen(Object side) {
+    return 'Choose Open $side';
+  }
+
+  @override
+  String fileSizeDetails(Object size, int bytes) {
+    return '$size · $bytes bytes';
+  }
+
+  @override
+  String get editingOn => 'Edit ON';
+
+  @override
+  String get editingOff => 'Edit OFF';
+
+  @override
+  String savePane(Object side) {
+    return 'Save $side';
+  }
+
+  @override
+  String savePaneAs(Object side) {
+    return 'Save $side As';
+  }
+
+  @override
+  String hashPaneLabel(Object side) {
+    return '$side: ';
+  }
+
+  @override
+  String get openingBlockedBySave =>
+      'A save is in progress. Wait before opening another file.';
+
+  @override
+  String get alreadyOpenInOtherPane =>
+      'This file is already open in the other pane. Open a copy to edit it independently.';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get hash => 'Hash';
+
+  @override
+  String get sameOffsetComparison => 'Same-offset comparison';
+
+  @override
+  String updateAvailable(Object version) {
+    return 'Update $version available';
+  }
+
+  @override
+  String get updateDownload => 'Download';
+
+  @override
+  String get updateViewRelease => 'View release';
+
+  @override
+  String get binaryFiles => 'Binary files';
+
+  @override
+  String differenceSummary(Object label, int bytes, int ranges) {
+    return '$label $bytes bytes / $ranges ranges';
+  }
+
+  @override
+  String get differences => 'Differences';
+
+  @override
+  String get foundSoFar => 'Found so far';
+
+  @override
+  String selectedOffset(Object side, Object offset) {
+    return '$side 0x$offset';
+  }
+
+  @override
+  String get differenceLegend => 'Red: different · Orange: one side only';
 }

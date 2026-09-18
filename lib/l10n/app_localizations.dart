@@ -445,6 +445,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This file is empty'**
   String get hexPaneFileEmpty;
+
+  /// No description provided for @desktopInitializationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop integration could not be initialized.'**
+  String get desktopInitializationFailed;
+
+  /// No description provided for @saveChangesToFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes to the {side} file?'**
+  String saveChangesToFile(Object side);
+
+  /// No description provided for @discardEditsWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved edits will be lost if you discard them.'**
+  String get discardEditsWarning;
+
+  /// No description provided for @openFileFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open file.'**
+  String get openFileFailed;
+
+  /// No description provided for @readFileFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to read file.'**
+  String get readFileFailed;
+
+  /// No description provided for @comparisonFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Comparison failed.'**
+  String get comparisonFailed;
+
+  /// No description provided for @fileChangedOutsideApp.
+  ///
+  /// In en, this message translates to:
+  /// **'File changed outside the app'**
+  String get fileChangedOutsideApp;
+
+  /// No description provided for @overwriteChangedFilePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite the externally changed file with the current edited content?'**
+  String get overwriteChangedFilePrompt;
+
+  /// No description provided for @destinationChangedSaveAs.
+  ///
+  /// In en, this message translates to:
+  /// **'The destination changed outside the app. Choose Save As again.'**
+  String get destinationChangedSaveAs;
+
+  /// No description provided for @saveFileFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save file.'**
+  String get saveFileFailed;
+
+  /// No description provided for @saveNoFileOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'No file is open.'**
+  String get saveNoFileOpen;
+
+  /// No description provided for @saveInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'A save is already in progress.'**
+  String get saveInProgress;
+
+  /// No description provided for @saveOtherPaneHasDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'The other pane already has this file open. Choose another destination.'**
+  String get saveOtherPaneHasDestination;
+
+  /// No description provided for @saveCouldNotStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to start save.'**
+  String get saveCouldNotStart;
+
+  /// No description provided for @saveNoBackend.
+  ///
+  /// In en, this message translates to:
+  /// **'No safe save backend is available for this platform.'**
+  String get saveNoBackend;
+
+  /// No description provided for @saveDestinationDirectoryMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The destination directory does not exist.'**
+  String get saveDestinationDirectoryMissing;
+
+  /// No description provided for @saveInstallationAmbiguous.
+  ///
+  /// In en, this message translates to:
+  /// **'The save result is ambiguous. A recovery copy was retained.'**
+  String get saveInstallationAmbiguous;
+
+  /// No description provided for @saveInstallationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to install the saved file.'**
+  String get saveInstallationFailed;
+
+  /// No description provided for @saveSavedButCouldNotReopen.
+  ///
+  /// In en, this message translates to:
+  /// **'The file was saved, but could not be reopened.'**
+  String get saveSavedButCouldNotReopen;
+
+  /// No description provided for @invalidHexOffset.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a hexadecimal offset within the file'**
+  String get invalidHexOffset;
+
+  /// No description provided for @hexOffsetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hex offset (e.g. 400 or 0x400)'**
+  String get hexOffsetHint;
+
+  /// No description provided for @fileDropTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'{side} file drop target. Drop one binary file to open it on the {side}.'**
+  String fileDropTarget(Object side);
+
+  /// No description provided for @paneFileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{side} · {name}'**
+  String paneFileLabel(Object side, Object name);
+
+  /// No description provided for @chooseOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Open {side}'**
+  String chooseOpen(Object side);
+
+  /// No description provided for @fileSizeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} · {bytes} bytes'**
+  String fileSizeDetails(Object size, int bytes);
+
+  /// No description provided for @editingOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit ON'**
+  String get editingOn;
+
+  /// No description provided for @editingOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit OFF'**
+  String get editingOff;
+
+  /// No description provided for @savePane.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {side}'**
+  String savePane(Object side);
+
+  /// No description provided for @savePaneAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Save {side} As'**
+  String savePaneAs(Object side);
+
+  /// No description provided for @hashPaneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{side}: '**
+  String hashPaneLabel(Object side);
+
+  /// No description provided for @openingBlockedBySave.
+  ///
+  /// In en, this message translates to:
+  /// **'A save is in progress. Wait before opening another file.'**
+  String get openingBlockedBySave;
+
+  /// No description provided for @alreadyOpenInOtherPane.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is already open in the other pane. Open a copy to edit it independently.'**
+  String get alreadyOpenInOtherPane;
+
+  /// No description provided for @error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// No description provided for @hash.
+  ///
+  /// In en, this message translates to:
+  /// **'Hash'**
+  String get hash;
+
+  /// No description provided for @sameOffsetComparison.
+  ///
+  /// In en, this message translates to:
+  /// **'Same-offset comparison'**
+  String get sameOffsetComparison;
+
+  /// No description provided for @updateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Update {version} available'**
+  String updateAvailable(Object version);
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get updateDownload;
+
+  /// No description provided for @updateViewRelease.
+  ///
+  /// In en, this message translates to:
+  /// **'View release'**
+  String get updateViewRelease;
+
+  /// No description provided for @binaryFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Binary files'**
+  String get binaryFiles;
+
+  /// No description provided for @differenceSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} {bytes} bytes / {ranges} ranges'**
+  String differenceSummary(Object label, int bytes, int ranges);
+
+  /// No description provided for @differences.
+  ///
+  /// In en, this message translates to:
+  /// **'Differences'**
+  String get differences;
+
+  /// No description provided for @foundSoFar.
+  ///
+  /// In en, this message translates to:
+  /// **'Found so far'**
+  String get foundSoFar;
+
+  /// No description provided for @selectedOffset.
+  ///
+  /// In en, this message translates to:
+  /// **'{side} 0x{offset}'**
+  String selectedOffset(Object side, Object offset);
+
+  /// No description provided for @differenceLegend.
+  ///
+  /// In en, this message translates to:
+  /// **'Red: different · Orange: one side only'**
+  String get differenceLegend;
 }
 
 class _AppLocalizationsDelegate

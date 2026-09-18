@@ -97,7 +97,35 @@ void main() {
       Localizations.localeOf(tester.element(find.byType(Scaffold))),
       const Locale('ja'),
     );
+    expect(find.text('左を開く'), findsWidgets);
+    expect(find.text('ファイルをここへドラッグして開く'), findsNWidgets(2));
+    expect(find.text('比較する 2 つのファイルを開いてください'), findsOneWidget);
     expect(controller.leftEdits, {0x12: 0xff});
+    controller.dispose();
+  });
+
+  testWidgets('visible semantic errors change language without losing detail', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1100, 760));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    final language = LanguageController();
+    final controller = CompareController()
+      ..reportError(
+        CompareError.openFileFailed,
+        detail: 'FileSystemException: denied',
+      );
+    await tester.pumpWidget(
+      MushagaeshiBinaryEditorApp(language: language, controller: controller),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Unable to open file.'), findsOneWidget);
+    expect(find.textContaining('FileSystemException: denied'), findsOneWidget);
+
+    await language.select(AppLanguage.ja);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ファイルを開けません。'), findsOneWidget);
+    expect(find.textContaining('FileSystemException: denied'), findsOneWidget);
     controller.dispose();
   });
 }

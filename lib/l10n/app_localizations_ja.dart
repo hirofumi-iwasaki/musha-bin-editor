@@ -202,4 +202,161 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get hexPaneFileEmpty => 'このファイルは空です';
+
+  @override
+  String get desktopInitializationFailed => 'デスクトップ連携を初期化できませんでした。';
+
+  @override
+  String saveChangesToFile(Object side) {
+    return '$sideのファイルへの変更を保存しますか？';
+  }
+
+  @override
+  String get discardEditsWarning => '破棄すると未保存の編集は失われます。';
+
+  @override
+  String get openFileFailed => 'ファイルを開けません。';
+
+  @override
+  String get readFileFailed => 'ファイルを読み取れません。';
+
+  @override
+  String get comparisonFailed => '比較に失敗しました。';
+
+  @override
+  String get fileChangedOutsideApp => 'ファイルがアプリ外で変更されました';
+
+  @override
+  String get overwriteChangedFilePrompt => '外部で変更されたファイルを現在の編集内容で上書きしますか？';
+
+  @override
+  String get destinationChangedSaveAs =>
+      '保存先がアプリ外で変更されました。もう一度「名前を付けて保存」を選んでください。';
+
+  @override
+  String get saveFileFailed => 'ファイルを保存できません。';
+
+  @override
+  String get saveNoFileOpen => '開いているファイルがありません。';
+
+  @override
+  String get saveInProgress => 'すでに保存中です。';
+
+  @override
+  String get saveOtherPaneHasDestination =>
+      'もう一方のペインでこのファイルを開いています。別の保存先を選んでください。';
+
+  @override
+  String get saveCouldNotStart => '保存を開始できません。';
+
+  @override
+  String get saveNoBackend => 'このプラットフォームでは安全な保存機能を利用できません。';
+
+  @override
+  String get saveDestinationDirectoryMissing => '保存先のフォルダーがありません。';
+
+  @override
+  String get saveInstallationAmbiguous => '保存結果を確認できません。復旧用コピーを保持しました。';
+
+  @override
+  String get saveInstallationFailed => '保存済みファイルを配置できません。';
+
+  @override
+  String get saveSavedButCouldNotReopen => 'ファイルは保存されましたが、開き直せませんでした。';
+
+  @override
+  String get invalidHexOffset => 'ファイル内の16進オフセットを入力してください';
+
+  @override
+  String get hexOffsetHint => '16進オフセット（例: 400 または 0x400）';
+
+  @override
+  String fileDropTarget(Object side) {
+    return '$sideファイルのドロップ先。バイナリファイルを1つドロップして開きます。';
+  }
+
+  @override
+  String paneFileLabel(Object side, Object name) {
+    return '$side · $name';
+  }
+
+  @override
+  String chooseOpen(Object side) {
+    return '$sideを開く';
+  }
+
+  @override
+  String fileSizeDetails(Object size, int bytes) {
+    return '$size · $bytes バイト';
+  }
+
+  @override
+  String get editingOn => '編集オン';
+
+  @override
+  String get editingOff => '編集オフ';
+
+  @override
+  String savePane(Object side) {
+    return '$sideを保存';
+  }
+
+  @override
+  String savePaneAs(Object side) {
+    return '$sideに名前を付けて保存';
+  }
+
+  @override
+  String hashPaneLabel(Object side) {
+    return '$side: ';
+  }
+
+  @override
+  String get openingBlockedBySave => '保存中です。別のファイルを開く前に完了を待ってください。';
+
+  @override
+  String get alreadyOpenInOtherPane =>
+      'このファイルはもう一方のペインですでに開かれています。個別に編集するにはコピーを開いてください。';
+
+  @override
+  String get error => 'エラー';
+
+  @override
+  String get hash => 'ハッシュ';
+
+  @override
+  String get sameOffsetComparison => '同一オフセット比較';
+
+  @override
+  String updateAvailable(Object version) {
+    return '更新 $version を利用できます';
+  }
+
+  @override
+  String get updateDownload => 'ダウンロード';
+
+  @override
+  String get updateViewRelease => 'リリースを見る';
+
+  @override
+  String get binaryFiles => 'バイナリファイル';
+
+  @override
+  String differenceSummary(Object label, int bytes, int ranges) {
+    return '$label $bytes バイト / $ranges 範囲';
+  }
+
+  @override
+  String get differences => '差分';
+
+  @override
+  String get foundSoFar => '現時点の検出';
+
+  @override
+  String selectedOffset(Object side, Object offset) {
+    return '$side 0x$offset';
+  }
+
+  @override
+  String get differenceLegend => '赤: 差分 · 橙: 片側のみ';
 }

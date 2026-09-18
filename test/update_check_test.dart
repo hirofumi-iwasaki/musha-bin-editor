@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
+import 'package:mushagaeshi_binary_editor/application/language_controller.dart';
 import 'package:mushagaeshi_binary_editor/main.dart';
 import 'package:mushagaeshi_binary_editor/update/update_check.dart';
 
@@ -122,7 +123,7 @@ void main() {
     final opener = FakeOpener();
     final check = controller(prefs, http, opener);
     await check.checkAutomatic();
-    expect(check.offer?.linkLabel, 'Download');
+    expect(check.offer?.link, UpdateOfferLink.download);
     expect(check.offer?.version.toString(), '0.6.0');
     expect(prefs.values['updateEtag'], 'etag-1');
     await check.openOffer();
@@ -147,7 +148,7 @@ void main() {
     );
     final check = controller(prefs, http, FakeOpener());
     await check.checkAutomatic();
-    expect(check.offer?.linkLabel, 'View release');
+    expect(check.offer?.link, UpdateOfferLink.viewRelease);
 
     final badPage = release().replaceFirst(
       'https://github.com/',
@@ -280,7 +281,7 @@ void main() {
         FakeOpener(),
       );
       await cached.checkAutomatic();
-      expect(cached.offer?.linkLabel, 'View release');
+      expect(cached.offer?.link, UpdateOfferLink.viewRelease);
 
       prefs.values['updateLastValidatedAt'] = 0;
       final limited = FakeHttpClient(
@@ -311,11 +312,15 @@ void main() {
         ),
       );
       final check = controller(prefs, http, opener);
-      await tester.pumpWidget(MushagaeshiBinaryEditorApp(updateChecker: check));
+      final language = LanguageController();
+      await language.select(AppLanguage.ja);
+      await tester.pumpWidget(
+        MushagaeshiBinaryEditorApp(language: language, updateChecker: check),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Update 0.6.0 available'), findsOneWidget);
-      expect(find.widgetWithText(TextButton, 'Download'), findsOneWidget);
-      await tester.tap(find.text('Download'));
+      expect(find.text('更新 0.6.0 を利用できます'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'ダウンロード'), findsOneWidget);
+      await tester.tap(find.text('ダウンロード'));
       await tester.pump();
       expect(opener.opened, check.offer?.url);
       await tester.pumpWidget(const SizedBox());

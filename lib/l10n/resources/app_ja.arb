@@ -113,5 +113,96 @@
   "hexPaneOffsetHeader": "オフセット",
   "hexPaneAsciiHeader": "ASCII",
   "hexPaneDragFileHereToOpen": "ファイルをここへドラッグして開く",
-  "hexPaneFileEmpty": "このファイルは空です"
+  "hexPaneFileEmpty": "このファイルは空です",
+  "desktopInitializationFailed": "デスクトップ連携を初期化できませんでした。",
+  "saveChangesToFile": "{side}のファイルへの変更を保存しますか？",
+  "@saveChangesToFile": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "discardEditsWarning": "破棄すると未保存の編集は失われます。",
+  "openFileFailed": "ファイルを開けません。",
+  "readFileFailed": "ファイルを読み取れません。",
+  "comparisonFailed": "比較に失敗しました。",
+  "fileChangedOutsideApp": "ファイルがアプリ外で変更されました",
+  "overwriteChangedFilePrompt": "外部で変更されたファイルを現在の編集内容で上書きしますか？",
+  "destinationChangedSaveAs": "保存先がアプリ外で変更されました。もう一度「名前を付けて保存」を選んでください。",
+  "saveFileFailed": "ファイルを保存できません。",
+  "saveNoFileOpen": "開いているファイルがありません。",
+  "saveInProgress": "すでに保存中です。",
+  "saveOtherPaneHasDestination": "もう一方のペインでこのファイルを開いています。別の保存先を選んでください。",
+  "saveCouldNotStart": "保存を開始できません。",
+  "saveNoBackend": "このプラットフォームでは安全な保存機能を利用できません。",
+  "saveDestinationDirectoryMissing": "保存先のフォルダーがありません。",
+  "saveInstallationAmbiguous": "保存結果を確認できません。復旧用コピーを保持しました。",
+  "saveInstallationFailed": "保存済みファイルを配置できません。",
+  "saveSavedButCouldNotReopen": "ファイルは保存されましたが、開き直せませんでした。",
+  "invalidHexOffset": "ファイル内の16進オフセットを入力してください",
+  "hexOffsetHint": "16進オフセット（例: 400 または 0x400）",
+  "fileDropTarget": "{side}ファイルのドロップ先。バイナリファイルを1つドロップして開きます。",
+  "@fileDropTarget": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "paneFileLabel": "{side} · {name}",
+  "@paneFileLabel": {
+    "placeholders": {
+      "side": {},
+      "name": {}
+    }
+  },
+  "chooseOpen": "{side}を開く",
+  "@chooseOpen": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "fileSizeDetails": "{size} · {bytes} バイト",
+  "@fileSizeDetails": {
+    "placeholders": {
+      "size": {},
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "editingOn": "編集オン",
+  "editingOff": "編集オフ",
+  "savePane": "{side}を保存",
+  "@savePane": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "savePaneAs": "{side}に名前を付けて保存",
+  "@savePaneAs": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "hashPaneLabel": "{side}: ",
+  "@hashPaneLabel": {
+    "placeholders": {
+      "side": {}
+    }
+  },
+  "openingBlockedBySave": "保存中です。別のファイルを開く前に完了を待ってください。",
+  "alreadyOpenInOtherPane": "このファイルはもう一方のペインですでに開かれています。個別に編集するにはコピーを開いてください。",
+  "error": "エラー",
+  "hash": "ハッシュ",
+  "sameOffsetComparison": "同一オフセット比較",
+  "updateAvailable": "更新 {version} を利用できます",
+  "@updateAvailable": {"placeholders": {"version": {}}},
+  "updateDownload": "ダウンロード",
+  "updateViewRelease": "リリースを見る",
+  "binaryFiles": "バイナリファイル",
+  "differenceSummary": "{label} {bytes} バイト / {ranges} 範囲",
+  "@differenceSummary": {"placeholders": {"label": {}, "bytes": {"type": "int"}, "ranges": {"type": "int"}}},
+  "differences": "差分",
+  "foundSoFar": "現時点の検出",
+  "selectedOffset": "{side} 0x{offset}",
+  "@selectedOffset": {"placeholders": {"side": {}, "offset": {}}},
+  "differenceLegend": "赤: 差分 · 橙: 片側のみ"
 }

@@ -61,7 +61,7 @@ abstract class DesktopPlatform {
   String? get stagingDirectory;
   Future<void> initialize();
   void setEventHandler(DesktopEventHandler? handler);
-  Future<String?> openFile(DesktopPane pane);
+  Future<String?> openFile(DesktopPane pane, String typeGroupLabel);
   Future<String?> saveFile(DesktopPane pane, String suggestedName);
   Future<SaveInstallResult> installSavedFile(
     String stagedPath,
@@ -103,12 +103,10 @@ class _DesktopPlatform extends DesktopPlatform with WindowListener {
   void setEventHandler(DesktopEventHandler? handler) => _handler = handler;
 
   @override
-  Future<String?> openFile(DesktopPane pane) async {
+  Future<String?> openFile(DesktopPane pane, String typeGroupLabel) async {
     if (_isMacOS) return _channel.invokeMethod<String>('openFile', _side(pane));
     final file = await file_selector.openFile(
-      acceptedTypeGroups: const [
-        file_selector.XTypeGroup(label: 'Binary files'),
-      ],
+      acceptedTypeGroups: [file_selector.XTypeGroup(label: typeGroupLabel)],
     );
     return file?.path;
   }

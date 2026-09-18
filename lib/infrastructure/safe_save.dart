@@ -42,10 +42,27 @@ enum SaveOutcome {
   failed,
 }
 
+/// Application-owned failure state. The UI selects localized text from this
+/// code and only appends [SaveResult.detail] as an OS diagnostic.
+enum SaveError {
+  noFileOpen,
+  saveInProgress,
+  otherPaneHasDestination,
+  couldNotStart,
+  noBackend,
+  destinationDirectoryMissing,
+  destinationChanged,
+  installationAmbiguous,
+  installationFailed,
+  saveFailed,
+  savedButCouldNotReopen,
+}
+
 class SaveResult {
-  const SaveResult(this.outcome, [this.message, this.recoveryPath]);
+  const SaveResult(this.outcome, {this.error, this.detail, this.recoveryPath});
   final SaveOutcome outcome;
-  final String? message;
+  final SaveError? error;
+  final String? detail;
   final String? recoveryPath;
 }
 
@@ -93,10 +110,7 @@ Future<SaveResult> safelySave({
   var keepTemporary = false;
   try {
     if (install == null) {
-      return const SaveResult(
-        SaveOutcome.failed,
-        'No safe save backend is available for this platform.',
-      );
+      return const SaveResult(SaveOutcome.failed, error: SaveError.noBackend);
     }
     final current = await FileStamp.read(sourcePath);
     if (!current.matches(sourceStamp) && !allowExternalChange) {
@@ -108,7 +122,8 @@ Future<SaveResult> safelySave({
     if (!await directory.exists()) {
       return SaveResult(
         SaveOutcome.failed,
-        'The destination directory does not exist: ${directory.path}',
+        error: SaveError.destinationDirectoryMissing,
+        detail: directory.path,
       );
     }
     temporary = await _createExclusiveStage(directory);
@@ -157,7 +172,7 @@ Future<SaveResult> safelySave({
         !await destinationSnapshot.matches(destinationPath)) {
       return const SaveResult(
         SaveOutcome.destinationChanged,
-        'The destination changed outside the app. Choose Save again to review it.',
+        error: SaveError.destinationChanged,
       );
     }
     final installation = await install(temporary.path, destinationPath);
@@ -168,17 +183,23 @@ Future<SaveResult> safelySave({
         keepTemporary = true;
         return SaveResult(
           SaveOutcome.failed,
-          installation.message ?? 'The save result is ambiguous.',
-          installation.recoveryPath ?? temporary.path,
+          error: SaveError.installationAmbiguous,
+          detail: installation.message,
+          recoveryPath: installation.recoveryPath ?? temporary.path,
         );
       case SaveInstallation.failed:
         return SaveResult(
           SaveOutcome.failed,
-          installation.message ?? 'Unable to install the saved file.',
+          error: SaveError.installationFailed,
+          detail: installation.message,
         );
     }
   } catch (error) {
-    return SaveResult(SaveOutcome.failed, 'Unable to save file: $error');
+    return SaveResult(
+      SaveOutcome.failed,
+      error: SaveError.saveFailed,
+      detail: error.toString(),
+    );
   } finally {
     await input?.close();
     await output?.close();
