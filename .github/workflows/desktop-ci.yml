@@ -3,7 +3,7 @@ name: Desktop build and package
 on:
   pull_request:
   push:
-    branches: [release/0.7.0]
+    branches: [release/0.7.1]
   workflow_dispatch:
 
 permissions:

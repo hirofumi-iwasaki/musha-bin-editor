@@ -1,6 +1,14 @@
 # 作業計画と進捗
 
-## Current milestone: v0.6.0 (2026-09-15)
+## Current milestone: README v0.7.1 documentation update (2026-09-18)
+
+- Working branch: `release/0.7.1`, created from merged `main` at `62915103c6db9e9c5d6d72d1df325c66575aa225`.
+- Scope: replace stale v0.7.0 pre-publication README statements, add a complete Japanese README, and link both READMEs reciprocally.
+- Release evidence: v0.7.0 is published; its five binary archives include the required license and source/build materials. GitHub Actions run `35310954380` completed the package matrix for source revision `629eba1`.
+- Documentation limits: public Windows/Linux binaries are unsigned; the macOS package is ad-hoc signed and not notarized. CI/package success remains distinct from platform GUI and accessibility acceptance.
+- No application version, CI, build, package, or release metadata changes are part of this documentation-only work.
+
+## Historical milestone: v0.6.0 (2026-09-15)
 
 - Working branch: `release/0.6.0`, created from merged main `b5d6d7a`.
 - Goal: apply the approved Mushagaeshi icon across macOS, Windows and Linux packages.

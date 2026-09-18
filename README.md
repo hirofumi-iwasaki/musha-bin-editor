@@ -1,77 +1,76 @@
 # Mushagaeshi Binary Editor
 
-A side-by-side hexadecimal binary viewer and comparison app for macOS, Windows and Ubuntu.
+**English** | [日本語](README.ja.md)
+
+A side-by-side hexadecimal binary viewer, comparison tool, and fixed-size byte editor for macOS, Windows, and Ubuntu.
 
 Repository: [hirofumi-iwasaki/musha-bin-editor](https://github.com/hirofumi-iwasaki/musha-bin-editor)
 
-Version 0.7.0 adds a Japanese interface, automatic Japanese/English selection, and a persistent language selector. It does not change binary data, comparison, editing, or save behavior.
+[v0.7.0](https://github.com/hirofumi-iwasaki/musha-bin-editor/releases/tag/v0.7.0) is published. It adds Japanese/English UI localization and a persistent language choice. The preceding v0.6.0 work added the Mushagaeshi application icon to macOS, Windows, and Linux packages; v0.5.0 added quiet background checks for newer releases. Binary comparison, editing, and safe-save behavior are unchanged by localization.
 
-## UI language support
+## Release status
 
-**Language / 言語** at the top left offers **System / システム**, **English**, and **日本語**. A manual selection updates the interface immediately and is restored at the next launch. System mode uses only the first operating-system preferred language: `ja` (including a regional Japanese locale) uses Japanese and every other primary language uses English. A Japanese fallback later in the OS list does not switch the app to Japanese.
+The five v0.7.0 binary archives are published with their required licenses and source/build references. The release package matrix completed successfully in [GitHub Actions run 35310954380](https://github.com/hirofumi-iwasaki/musha-bin-editor/actions/runs/35310954380) for source revision `629eba1`. It covers Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64, and macOS Arm64 builds, packaging, architecture inspection, static analysis, and tests.
 
-Changing a manual selection does not replace open files, unsaved edits, the current offset, or an active comparison. macOS application-menu titles follow the selected app language. Native file-picker and Services chrome remain controlled by macOS and can stay in the OS language.
-
-## v0.7.0 release status
-
-The listed GitHub Actions builds and Parallels acceptance results are historical v0.4.0 evidence. The v0.7.0 native build, package and platform acceptance matrix remains pending. These results do not cover every native failure path or GUI scenario; detailed cross-version desktop acceptance remains separate from CI compilation.
-
-Windows/Linux use Ctrl instead of Command for the shortcuts listed below. Their file dialogs, pane drops and window close requests are routed through desktop adapters. Hexadecimal geometry and glyph rendering share measured font metrics, including enlarged text.
-
-Native CI and packaging scripts are included. Run `tool/build_windows.ps1 -Architecture x64` (or `arm64`) on the corresponding Windows host, and `bash tool/build_linux.sh x64` (or `arm64`) on the corresponding Ubuntu host. Each archive includes the full runtime bundle, third-party notices and corresponding-source/build references. Arm64 CI bootstraps the pinned official Flutter source checkout to obtain native Dart/engine artifacts. CI compilation is not a substitute for GUI acceptance.
-
-The Linux archive includes a GTK window icon and a freedesktop desktop entry with hicolor icon-theme files under `share/`. A package installer can place those files in the corresponding XDG data directories and make `mushagaeshi_binary_editor` available on `PATH`; merely unpacking the archive does not register a launcher. Before installation, start the bundled executable directly.
-
-Ubuntu existing-file replacement currently rejects special permission bits, owner/group changes, ACLs or other extended attributes (including cases where inspection fails), rather than discard metadata. Ordinary rwx permissions are preserved. Detailed native failure/recovery behavior still requires targeted Ubuntu and Windows execution tests. File change detection uses size and modification time and cannot detect every possible external rewrite.
-
-See the [update-check design](.chatgpt/UPDATE_CHECK_DESIGN.md) for network, cache and link-validation behavior.
+Automated builds and package checks do not cover every native failure path or GUI scenario. Cross-platform launch, file-dialog, drag-and-drop, save-recovery, and accessibility acceptance remain separate evidence. Public binaries are unsigned on Windows and Linux; the macOS package uses local ad-hoc signing and is not notarized.
 
 ## Requirements
 
-- macOS 15 Sequoia or macOS 26 Tahoe
-- Apple Silicon (M1 or later, on a Mac that supports the selected OS)
-- No Flutter installation is needed to run the built `.app`.
+- macOS 15 Sequoia or macOS 26 Tahoe on Apple Silicon (M1 or later)
+- Windows 11 x64 or Arm64
+- Ubuntu 22.04 or 24.04 LTS x64 or Arm64
+- No Flutter installation is needed to run a packaged application
 
-Development uses Flutter 3.47.4, Dart 3.13.3 and Xcode. See `.flutter-version` for the pinned SDK version. The app has been tested on macOS 26; macOS 15 still needs hardware validation.
+Development uses Flutter 3.47.4 and Dart 3.13.3. macOS development also uses Xcode. See [.flutter-version](.flutter-version) for the pinned Flutter SDK.
 
-## Run the macOS app
+## UI language support
 
-The locally packaged application is available at:
+**Language / 言語** at the top left offers **System / システム**, **English**, and **日本語**. A manual selection updates the application immediately and is restored at the next launch. System mode uses only the first operating-system preferred language: `ja` (including a regional Japanese locale) selects Japanese, and every other primary language selects English. A Japanese fallback later in the OS list does not switch the application to Japanese.
 
-```text
-dist/Mushagaeshi Binary Editor.app
-```
+Changing a manual selection does not replace open files, unsaved edits, the current offset, or an active comparison. macOS application-menu titles follow the selected app language. Native file pickers, Services, and other OS-owned chrome can remain in the operating-system language.
 
-Double-click the app in Finder, or run:
+## Download and run
+
+Download the archive for the current system from [Releases](https://github.com/hirofumi-iwasaki/musha-bin-editor/releases), extract the entire archive, and start the bundled application. Keep every extracted file together.
+
+| Platform | Archive |
+| --- | --- |
+| Windows x64 | `musha-bin-edit-windows-x64.zip` |
+| Windows Arm64 | `musha-bin-edit-windows-arm64.zip` |
+| Ubuntu x64 | `musha-bin-edit-linux-x64.tar.gz` |
+| Ubuntu Arm64 | `musha-bin-edit-linux-arm64.tar.gz` |
+| macOS Apple Silicon | `musha-bin-edit-macos.zip` |
+
+On macOS, open **Mushagaeshi Binary Editor.app** after extraction. A locally packaged app is at `dist/Mushagaeshi Binary Editor.app` and can be opened with:
 
 ```sh
 open 'dist/Mushagaeshi Binary Editor.app'
 ```
 
-You can copy the `.app` to your Applications folder. The current build is signed for local testing, not yet signed with a distribution identity or notarized for public release.
+The Linux archive includes a GTK window icon, a freedesktop desktop entry, and hicolor icon-theme files under `share/`. An installer can place those files in XDG data directories and make `mushagaeshi_binary_editor` available on `PATH`; extracting the archive alone does not register a launcher. Start the bundled executable directly before installation.
 
-Select **Open Left** and **Open Right** to compare files, or drop one Finder file onto each binary pane. Opening and comparing files never modifies their contents.
+Select **Open Left** and **Open Right** to compare files, or drop one file on each binary pane. Opening and comparing files never changes their contents.
 
 ## Features
 
-- Side-by-side offsets, hexadecimal bytes and ASCII characters
-- Red backgrounds on differing bytes; orange for bytes present on only one side
+- Side-by-side offsets, hexadecimal bytes, and ASCII characters
+- Red backgrounds for differing bytes and orange for bytes present on only one side
 - Missing bytes shown as `--`, distinct from a zero byte
-- Synchronized vertical scrolling using Flutter's standard macOS mouse-wheel, two-finger trackpad and scrollbar behavior, including the system natural-scrolling direction
-- Finder drag-and-drop: drop one file on the left or right binary pane to open it on that side
-- Per-file SHA-1 or MD5 values in a dedicated hash bar; SHA-1 is selected by default
-- Horizontal scrolling when a pane is too narrow to show all columns
+- Synchronized vertical and horizontal scrolling
+- Native file selection and one-file-per-pane drag and drop on macOS, Windows, and Linux
+- Per-file SHA-1 or MD5 hash display; SHA-1 is selected by default
 - Eight or sixteen bytes per row
-- Previous/next difference range and hexadecimal offset navigation
-- Click to select a byte; arrow keys, Page Up/Down and Home/End for navigation
-- Explicit Edit ON/OFF control for each pane; enter two hexadecimal digits to overwrite the selected byte
-- Per-pane unsaved-change indicators and immediate comparison updates
-- Save and Save As, with staged native replacement and external-change confirmation
+- Previous/next difference-range and hexadecimal-offset navigation
+- Click to select a byte; keyboard navigation with arrow keys, Page Up/Down, and Home/End
+- Per-pane Edit ON/OFF; enter two hexadecimal digits to overwrite a selected byte
+- Unsaved-change indicators and immediate comparison updates
+- Save and Save As with staged replacement and external-change confirmation
 - Save / Discard / Cancel protection when replacing an edited file or closing the window
-- Comparison progress, cancellation, re-comparison and external-change detection
-- Japanese and English controls, status messages, dialogs and accessibility labels
+- Comparison progress, cancellation, re-comparison, and external-change detection
+- Japanese and English controls, status messages, dialogs, tooltips, and accessibility labels
+- A quiet background update check that offers a validated GitHub download or release-page link when a newer compatible release is available
 
-The extra in-content title row has been removed to leave more space for binary data. The application name remains in the native macOS title bar and application menu.
+Windows and Linux use Ctrl where the shortcuts below show Command. The application icon is included in native macOS, Windows, and Linux packages.
 
 ## Keyboard shortcuts
 
@@ -86,19 +85,13 @@ The extra in-content title row has been removed to leave more space for binary d
 | Edit selected byte | Two hexadecimal digits while Edit is ON |
 | Cancel first hex digit | Escape |
 
-Offsets are hexadecimal, for example `400` or `0x400`.
+Offsets are hexadecimal, for example `400` or `0x400`. The hash bar reports saved file contents on disk; choose **SHA-1** or **MD5** from its dropdown. Opening or saving a file recalculates the value.
 
-The hash bar reports the saved file contents on disk. Select **SHA-1** or **MD5** from its dropdown; saving or opening a file recalculates the value.
+## Update checks
 
-## GitHub Actions builds
+After the window first appears, the app can silently check GitHub for a newer stable release. It sends no file contents, paths, hashes, edits, account identity, or telemetry. A check uses GitHub's public releases API and validates the version, release page, and exact archive name before it displays a non-modal status-row link. The app never downloads, installs, extracts, or restarts itself.
 
-The **Desktop build and package** workflow runs on pushes to `release/0.7.0`, on pull requests, and through `workflow_dispatch`. It builds Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64 and macOS Arm64 using native runners and pinned Flutter 3.47.4. Every job performs dependency resolution, static analysis, tests, a Release build, architecture inspection and artifact upload.
-
-Open the workflow run and download the desired package from **Artifacts**. Ubuntu artifact names include the build OS version; use the oldest supported build baseline for wider compatibility. Downloaded Actions artifacts contain the application distribution ZIP/tar.gz. Manual dispatch availability in GitHub's UI depends on the workflow being present on the default branch after merge.
-
-The v0.7.0 GitHub Release must contain five binary assets: `musha-bin-edit-windows-x64.zip`, `musha-bin-edit-windows-arm64.zip`, `musha-bin-edit-linux-x64.tar.gz`, `musha-bin-edit-linux-arm64.tar.gz` (both built on the Ubuntu 22.04 baseline), and `musha-bin-edit-macos.zip`. These exact names are the update checker's compatibility contract. It does not include a separate source ZIP; each binary archive includes `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `THIRD_PARTY_LICENSES/`, and `SOURCE_AND_BUILD.txt` with the corresponding source revision and build reference.
-
-The earlier seven-platform run predates this release branch. The v0.7.0 release candidate must rerun the full matrix with version 0.7.0 build 7 before publication.
+See the [update-check design](.chatgpt/UPDATE_CHECK_DESIGN.md) for the network, cache, rate-limit, and link-validation rules.
 
 ## Development and packaging
 
@@ -109,7 +102,7 @@ flutter pub get
 flutter run -d macos
 ```
 
-This workspace also contains a project-local SDK in `.tooling/flutter`. It is excluded from Git, and the system-wide PATH is unchanged.
+This workspace can contain a project-local SDK in `.tooling/flutter`. It is excluded from Git, and the system-wide PATH is unchanged.
 
 Build and package a standalone macOS app:
 
@@ -117,16 +110,14 @@ Build and package a standalone macOS app:
 ./tool/build_macos.sh
 ```
 
-The script prefers `.tooling/flutter/bin/flutter`, falling back to `flutter` on PATH. It builds the Release application and copies the signed bundle into `dist/`. Both `build/` and `dist/` are excluded from Git.
-
-For a build without the packaging step:
+Build the native Windows or Linux packages on the corresponding host:
 
 ```sh
-.tooling/flutter/bin/flutter build macos --release
-open 'build/macos/Build/Products/Release/Mushagaeshi Binary Editor.app'
+tool/build_windows.ps1 -Architecture x64
+bash tool/build_linux.sh x64
 ```
 
-The existing bundle identifier, `dev.mushagaeshi.mushagaeshiBinDiff`, is retained as the app's stable internal identity. Its displayed name and executable are **Mushagaeshi Binary Editor**.
+Use `arm64` for the Arm64 target. Each archive includes the runtime bundle, `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `THIRD_PARTY_LICENSES/`, and `SOURCE_AND_BUILD.txt`. Arm64 CI bootstraps the pinned official Flutter source checkout to obtain native Dart and engine artifacts.
 
 ## Validation
 
@@ -137,28 +128,23 @@ dart run tool/benchmark.dart 1 100 1024
 flutter run -d macos --profile --dart-define=BENCHMARK=true
 ```
 
-Tests cover comparison boundaries, two-digit editing, safe Save As output, external-change refusal, navigation, stale display requests, native file-drop messages and wheel/trackpad scrolling over both binary panes. The scrolling tests also exercise narrow panes with horizontal overflow.
+Tests cover comparison boundaries, editing, safe saves, external changes, navigation, stale display requests, file drops, scrolling, localization, and update-check validation. The comparison benchmark creates temporary file pairs and removes them afterwards. Its 1 GiB case needs about 2 GiB of free space. The rendering benchmark uses an internal generated fixture; it is not exposed in the product UI.
 
-The comparison benchmark creates temporary file pairs and removes them afterwards. The 1 GiB case needs approximately 2 GiB of free disk space. Files are compared immediately after creation, so the measurements are affected by the OS cache. The rendering benchmark loads an internal generated fixture, scrolls it 180 times and logs median and 95th-percentile frame build/raster times. This fixture is not exposed in the product UI.
+## Architecture and limitations
 
-## Architecture and current limitations
+- `lib/core`: Flutter-independent comparison rules, range counting, and navigation
+- `lib/infrastructure`: paged file reads, change checks, safe saves, and background comparison
+- `lib/application`: comparison session, cancellation, and viewport request generations
+- `lib/presentation`: visible hexadecimal-row painting
+- `lib/platform`: native desktop integration boundaries
+- `macos/Runner`, `windows/runner`, and `linux/runner`: native window, file, save, and package integration
 
-- `lib/core`: Flutter-independent comparison rules, range counting and navigation
-- `lib/infrastructure`: paged file reads, change checks and background comparison
-- `lib/application`: comparison session, cancellation and viewport request generations
-- `lib/presentation`: paints only visible hexadecimal rows
-- `macos/Runner`: native file selection and window configuration
+Comparison uses absolute offsets; insertions and deletions are not realigned. Text display is ASCII only. Difference navigation currently scans from the start to the needed range, so a jump near the end of a large file can take time. Display reads use a 64 KiB page cache, comparison reads use 1 MiB blocks, and the bounded text-layout cache holds up to 2,048 entries.
 
-Comparison uses absolute offsets. Insertions and deletions are not realigned. Text display is ASCII only.
+External-change detection checks size and timestamps during reads, comparisons, and saves. Save refuses an externally changed source until the user confirms overwrite. On Ubuntu, replacement rejects special permission bits, owner/group changes, ACLs, or other extended attributes rather than discard metadata; ordinary rwx permissions are preserved. File change detection cannot detect every possible external rewrite.
 
-Difference navigation currently scans from the start to the required range, which can take time near the end of large files. A block index is planned. Display reads use a 64 KiB page cache, comparison reads use 1 MiB blocks, and the bounded text-layout cache holds up to 2,048 entries. The app does not construct a widget for every byte or retain an unbounded list of difference ranges.
-
-External-change detection checks file size and timestamps during reads, comparisons and saving. Save refuses an externally changed source until the user explicitly confirms overwrite. Saving streams the source through an edited-byte overlay into the app's temporary directory, flushes it and asks the native macOS layer to replace the exact user-selected destination only after successful output.
-
-Accessibility labels describe editing state and the selected byte and identify each file-drop target. Full VoiceOver operation remains unverified. Range selection, copying/pasting and undo/redo are not implemented yet; editing remains fixed-size byte overwrite only.
+Accessibility labels identify editing state, the selected byte, and each file-drop target. Full VoiceOver operation remains unverified. Range selection, copy/paste, undo/redo, insertion, and deletion are not implemented; editing is fixed-size byte overwrite only.
 
 ## License
 
-Project-authored code is licensed under **GNU GPL version 3 or later (GPL-3.0-or-later)**. See [LICENSE](LICENSE) and the [license policy](.chatgpt/LICENSE_POLICY.md). Third-party code and assets retain their respective licenses.
-
-Design decisions and work records are maintained in `.chatgpt/`. Distribution signing, notarization, copyright attribution and third-party notices will be finalized before public binary distribution.
+Project-authored code is licensed under **GNU GPL version 3 or later (GPL-3.0-or-later)**. See [LICENSE](LICENSE) and the [license policy](.chatgpt/LICENSE_POLICY.md). Third-party code and assets retain their respective licenses. Design decisions and work records are maintained in `.chatgpt/`.

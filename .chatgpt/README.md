@@ -6,8 +6,9 @@ This directory is the canonical record of design decisions, implementation plans
 
 ## Current work
 
-Start with [localization design](LOCALIZATION_DESIGN.md). The working branch is `release/0.7.0`, created from main at `b5d6d7a`. The update notification remains implemented; v0.7.0 adds Japanese/English runtime localization and native macOS panel/menu localization. The macOS Release package validation is recorded in the work plan.
-Start with [update check design](UPDATE_CHECK_DESIGN.md). The working branch is `release/0.6.0`, created from main at `b5d6d7a`. The approved application artwork is integrated into macOS, Windows and Linux packaging. Native macOS build validation is blocked until the local Xcode license is accepted.
+Version 0.7.0 has been released and merged into `main`. It includes the v0.5.0 background update notification, the v0.6.0 native macOS/Windows/Linux icon integration, and Japanese/English runtime localization with native macOS panel/menu localization. The release package matrix passed for source revision `629eba1`; platform GUI acceptance remains separate from CI evidence.
+
+The current documentation branch is `release/0.7.1`, created from merged `main` at `62915103c6db9e9c5d6d72d1df325c66575aa225`. It updates the bilingual README pair to describe the published v0.7.0 release and does not change application, CI, or release metadata.
 
 The [v0.4.0 continuation plan](RELEASE_0.4.0_PLAN.md) and [Windows/Linux design](CROSS_PLATFORM_DESIGN.md) remain historical references.
 
@@ -32,4 +33,4 @@ Earlier design documents retain their original Japanese text as historical recor
 - Do not store credentials, private keys or non-public device dumps here.
 - Recheck official platform and dependency support information when adopting or upgrading tools.
 
-v0.5.0 has been released and merged into main. Current work is the v0.6.0 cross-platform icon integration. Native CI compilation does not replace remaining hardware/GUI acceptance checks.
+The v0.7.0 release is published. Native CI compilation does not replace remaining platform GUI acceptance checks.
