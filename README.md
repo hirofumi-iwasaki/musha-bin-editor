@@ -4,15 +4,17 @@ A side-by-side hexadecimal binary viewer and comparison app for macOS, Windows a
 
 Repository: [hirofumi-iwasaki/musha-bin-editor](https://github.com/hirofumi-iwasaki/musha-bin-editor)
 
-Version 0.5.0 adds a non-blocking GitHub update notification after the first visible frame. It checks only the latest published stable release on a 24-hour cadence, offers the matching uploaded desktop package when available, and otherwise offers the validated release page. It never downloads, installs, or opens a browser automatically. The persisted automatic-check preference is enabled by default; a settings control is planned separately.
+Version 0.6.0 applies the approved Mushagaeshi artwork to macOS, Windows and Linux. macOS uses the complete AppIcon image set, Windows embeds a multi-resolution `.ico`, and Linux packages the GTK window icon together with standard desktop-entry and hicolor icon-theme assets. The transparent source artwork is retained at `design/icons/mushagaeshi-icon-concept-v1.png`.
 
-## v0.5.0 release status
+## v0.6.0 release status
 
-The listed GitHub Actions builds and Parallels acceptance results are historical v0.4.0 evidence. The v0.5.0 native build, package and platform acceptance matrix remains pending. These results do not cover every native failure path or GUI scenario; detailed cross-version desktop acceptance remains separate from CI compilation.
+The listed GitHub Actions builds and Parallels acceptance results are historical v0.4.0 evidence. The v0.6.0 native build, package and platform acceptance matrix remains pending. These results do not cover every native failure path or GUI scenario; detailed cross-version desktop acceptance remains separate from CI compilation.
 
 Windows/Linux use Ctrl instead of Command for the shortcuts listed below. Their file dialogs, pane drops and window close requests are routed through desktop adapters. Hexadecimal geometry and glyph rendering share measured font metrics, including enlarged text.
 
 Native CI and packaging scripts are included. Run `tool/build_windows.ps1 -Architecture x64` (or `arm64`) on the corresponding Windows host, and `bash tool/build_linux.sh x64` (or `arm64`) on the corresponding Ubuntu host. Each archive includes the full runtime bundle, third-party notices and corresponding-source/build references. Arm64 CI bootstraps the pinned official Flutter source checkout to obtain native Dart/engine artifacts. CI compilation is not a substitute for GUI acceptance.
+
+The Linux archive includes a GTK window icon and a freedesktop desktop entry with hicolor icon-theme files under `share/`. A package installer can place those files in the corresponding XDG data directories and make `mushagaeshi_binary_editor` available on `PATH`; merely unpacking the archive does not register a launcher. Before installation, start the bundled executable directly.
 
 Ubuntu existing-file replacement currently rejects special permission bits, owner/group changes, ACLs or other extended attributes (including cases where inspection fails), rather than discard metadata. Ordinary rwx permissions are preserved. Detailed native failure/recovery behavior still requires targeted Ubuntu and Windows execution tests. File change detection uses size and modification time and cannot detect every possible external rewrite.
 
@@ -84,13 +86,13 @@ The hash bar reports the saved file contents on disk. Select **SHA-1** or **MD5*
 
 ## GitHub Actions builds
 
-The **Desktop build and package** workflow runs on pushes to `release/0.5.0`, on pull requests, and through `workflow_dispatch`. It builds Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64 and macOS Arm64 using native runners and pinned Flutter 3.47.4. Every job performs dependency resolution, static analysis, tests, a Release build, architecture inspection and artifact upload.
+The **Desktop build and package** workflow runs on pushes to `release/0.6.0`, on pull requests, and through `workflow_dispatch`. It builds Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64 and macOS Arm64 using native runners and pinned Flutter 3.47.4. Every job performs dependency resolution, static analysis, tests, a Release build, architecture inspection and artifact upload.
 
 Open the workflow run and download the desired package from **Artifacts**. Ubuntu artifact names include the build OS version; use the oldest supported build baseline for wider compatibility. Downloaded Actions artifacts contain the application distribution ZIP/tar.gz. Manual dispatch availability in GitHub's UI depends on the workflow being present on the default branch after merge.
 
-The v0.5.0 GitHub Release must contain five binary assets: `musha-bin-edit-windows-x64.zip`, `musha-bin-edit-windows-arm64.zip`, `musha-bin-edit-linux-x64.tar.gz`, `musha-bin-edit-linux-arm64.tar.gz` (both built on the Ubuntu 22.04 baseline), and `musha-bin-edit-macos.zip`. These exact names are the update checker's compatibility contract. It does not include a separate source ZIP; each binary archive includes `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `THIRD_PARTY_LICENSES/`, and `SOURCE_AND_BUILD.txt` with the corresponding source revision and build reference.
+The v0.6.0 GitHub Release must contain five binary assets: `musha-bin-edit-windows-x64.zip`, `musha-bin-edit-windows-arm64.zip`, `musha-bin-edit-linux-x64.tar.gz`, `musha-bin-edit-linux-arm64.tar.gz` (both built on the Ubuntu 22.04 baseline), and `musha-bin-edit-macos.zip`. These exact names are the update checker's compatibility contract. It does not include a separate source ZIP; each binary archive includes `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `THIRD_PARTY_LICENSES/`, and `SOURCE_AND_BUILD.txt` with the corresponding source revision and build reference.
 
-The earlier seven-platform run predates this release branch. The v0.5.0 release candidate must rerun the full matrix with version 0.5.0 build 5 before publication.
+The earlier seven-platform run predates this release branch. The v0.6.0 release candidate must rerun the full matrix with version 0.6.0 build 6 before publication.
 
 ## Development and packaging
 
