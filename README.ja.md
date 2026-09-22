@@ -8,6 +8,8 @@ macOS、Windows、Ubuntu向けの、左右並列表示による16進数バイナ
 
 [v0.7.0](https://github.com/hirofumi-iwasaki/musha-bin-editor/releases/tag/v0.7.0)を公開しています。この版では日本語・英語のUIローカライズと、選択を保存する言語設定を追加しました。v0.6.0ではMushagaeshiのアプリアイコンをmacOS、Windows、Linuxのパッケージへ追加し、v0.5.0では新しいリリースを静かに確認するバックグラウンド更新チェックを追加しています。ローカライズによるバイナリ比較、編集、安全な保存の動作変更はありません。
 
+v0.7.2では、プラグイン登録後に競合するネイティブ`desktop_drop`オーバーレイを無効化し、アプリのAppKitドロップホストがFinderからのドラッグを受け取り、Finderのセキュリティスコープを保持できるようにしました。この経路はネイティブ回帰テストとFlutterのドロップテストで確認していますが、リリースバンドル上での物理的なFinderドラッグは未確認です。
+
 ## リリース状況
 
 必要なライセンスとソース／ビルド参照を含むv0.7.0の5つのバイナリアーカイブを公開しています。ソースリビジョン`629eba1`に対する[GitHub Actions run 35310954380](https://github.com/hirofumi-iwasaki/musha-bin-editor/actions/runs/35310954380)では、Windows x64／Arm64、Ubuntu 22.04／24.04 x64／Arm64、macOS Arm64のビルド、パッケージ作成、アーキテクチャ検査、静的解析、テストが成功しています。

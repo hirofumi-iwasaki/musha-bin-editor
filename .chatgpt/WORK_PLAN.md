@@ -165,6 +165,13 @@
 - Added a dedicated AppKit root drop-host view around the Flutter view controller. The host registers file URL types, validates one regular Finder file, retains security-scoped access, and forwards live drag/drop coordinates through the existing method channel.
 - Moved left/right selection to Flutter hit-testing against the actual rendered pane rectangles. The full pane header and HEX body are targets; areas outside both panes show an English guidance error.
 - Added a primary-color hover border/background for the actual pane under the drag while retaining the English accessibility drop-target labels.
+
+### 2026-09-18 v0.7.1 Finder drop interception repair
+
+- The macOS implementation keeps using the AppKit root drop host because it owns Finder security-scoped access. `desktop_drop` remains needed for Windows and Linux, but its macOS plugin also installs a full-size native `DropTarget` over the Flutter view during generated plugin registration. That overlay was the effective drag destination and did not forward its events because macOS deliberately does not use widget drop targets.
+- After plugin registration, the Runner now unregisters only that plugin overlay's dragged types. This leaves the plugin available on the other desktop platforms and restores delivery to the root host without editing generated registrant code.
+- Native validation enters the dropped URL's security scope before inspecting it and accepts every regular file based on its filesystem resource value, without extension filters. Directories and multiple-file drops remain rejected.
+- Regression coverage constructs the actual `desktop_drop` macOS plugin target, verifies that it registers file URLs, and verifies that the Runner disables that registration. It also verifies extensionless and unusual-extension regular files, directories, and Dart channel routing to both panes. Flutter analysis and all tests, native Runner tests, and the signed v0.7.1 macOS build pass. A physical Finder drag against the packaged application remains manual acceptance work because GUI automation could not complete its app launch.
 - Extended tests for native message routing, real pane coordinates, left/right selection, English errors, accessibility labels and hover state. Static analysis is clean and all 13 tests pass. The Release Swift build succeeds and the packaged app launches with the Flutter surface hosted correctly.
 
 ### 2026-09-14 Final 0.1.0 sample removal

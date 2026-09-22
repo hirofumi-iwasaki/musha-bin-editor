@@ -8,6 +8,8 @@ Repository: [hirofumi-iwasaki/musha-bin-editor](https://github.com/hirofumi-iwas
 
 [v0.7.0](https://github.com/hirofumi-iwasaki/musha-bin-editor/releases/tag/v0.7.0) is published. It adds Japanese/English UI localization and a persistent language choice. The preceding v0.6.0 work added the Mushagaeshi application icon to macOS, Windows, and Linux packages; v0.5.0 added quiet background checks for newer releases. Binary comparison, editing, and safe-save behavior are unchanged by localization.
 
+Version 0.7.2 fixes macOS Finder drop routing by disabling the competing native `desktop_drop` overlay after plugin registration, so the app's AppKit drop host receives the drag and retains the Finder security scope. Native regression and Flutter drop tests cover this routing; a physical Finder drag on the release bundle has not been verified.
+
 ## Release status
 
 The five v0.7.0 binary archives are published with their required licenses and source/build references. The release package matrix completed successfully in [GitHub Actions run 35310954380](https://github.com/hirofumi-iwasaki/musha-bin-editor/actions/runs/35310954380) for source revision `629eba1`. It covers Windows x64/Arm64, Ubuntu 22.04/24.04 x64/Arm64, and macOS Arm64 builds, packaging, architecture inspection, static analysis, and tests.

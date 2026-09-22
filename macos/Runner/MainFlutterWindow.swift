@@ -2,7 +2,42 @@
 import Cocoa
 import FlutterMacOS
 
-private final class FileDropHostView: NSView {
+/// Removes the macOS overlay installed by desktop_drop.
+///
+/// The application uses its AppKit root view for macOS drops so it can retain
+/// the Finder security scope.  desktop_drop is still registered for Windows
+/// and Linux, but its macOS plugin installs a full-size DropTarget over the
+/// Flutter view during generated plugin registration.  If that target remains
+/// registered, AppKit sends every drag to it before this root view and the
+/// event is never forwarded to the app's file channel.
+@discardableResult
+func unregisterDesktopDropTargets(in view: NSView) -> Int {
+  var count = 0
+  for subview in view.subviews {
+    let className = String(reflecting: type(of: subview))
+    if className == "desktop_drop.DropTarget" {
+      subview.unregisterDraggedTypes()
+      count += 1
+    }
+    count += unregisterDesktopDropTargets(in: subview)
+  }
+  return count
+}
+
+enum FileDropValidation {
+  /// Use the resource value rather than a filename or extension so any
+  /// regular file (including an extensionless file) is eligible.
+  static func isRegularFile(_ url: URL) -> Bool {
+    guard url.isFileURL,
+          let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+    else {
+      return false
+    }
+    return values.isRegularFile == true
+  }
+}
+
+final class FileDropHostView: NSView {
   var channel: FlutterMethodChannel?
   private var accessURLs: [String: URL] = [:]
 
@@ -61,13 +96,25 @@ private final class FileDropHostView: NSView {
       channel?.invokeMethod("fileDropError", arguments: ["code": "notFinderFile"])
       return false
     }
-    var isDirectory: ObjCBool = false
-    guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
+    // The sandbox grants access to the Finder-selected URL, not necessarily
+    // to a path lookup before its security scope has been entered.
+    let startedAccess = url.startAccessingSecurityScopedResource()
+    var retainAccess = false
+    defer {
+      if startedAccess && !retainAccess {
+        url.stopAccessingSecurityScopedResource()
+      }
+    }
+    guard FileDropValidation.isRegularFile(url) else {
       channel?.invokeMethod("fileDropError", arguments: ["code": "notReadableFile"])
       return false
     }
     let location = point(sender)
-    if url.startAccessingSecurityScopedResource() { accessURLs[url.path] = url }
+    if startedAccess {
+      accessURLs[url.path]?.stopAccessingSecurityScopedResource()
+      accessURLs[url.path] = url
+      retainAccess = true
+    }
     channel?.invokeMethod("fileDropped", arguments: ["path": url.path, "x": location.x, "y": location.y])
     return true
   }
@@ -120,6 +167,10 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     delegate = self
     center()
     RegisterGeneratedPlugins(registry: controller)
+    // desktop_drop is used by the Windows/Linux widget targets.  Its macOS
+    // plugin adds a full-view native DropTarget during registration; disable
+    // only that target's drag registration so this host receives Finder drops.
+    unregisterDesktopDropTargets(in: controller.view)
     channel = FlutterMethodChannel(name: "mushagaeshi/files", binaryMessenger: controller.engine.binaryMessenger)
     host.channel = channel
     languageChannel = FlutterMethodChannel(
